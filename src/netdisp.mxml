@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Module xmlns:mx="http://www.adobe.com/2006/mxml" 
+	layout="absolute" 
+	creationComplete="startup();" 
+	width="113" height="85" 
+	xmlns:ns1="routines.*" 
+	rollOver="showElems(true)" rollOut="showElems(false)" horizontalScrollPolicy="off" verticalScrollPolicy="off" >
+	
+	<ns1:Netvid x="0" y="0" width="100%" height="100%"  id="frame" />
+	<mx:CheckBox bottom="2" left="2" label="Звук" color="#FFFC00" 
+				 change="mute();" id="sound"  
+				 textRollOverColor="#FFFC00" 
+				 textSelectedColor="#FFFC00" 
+				 enabled="true"
+				 visible="false"
+				 selected="true"
+				 showEffect="{fadeIn}"
+				 hideEffect="{fadeOut}"  >
+		<mx:filters>
+			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+		</mx:filters>
+	</mx:CheckBox>
+	<mx:CheckBox bottom="20" left="2" label="Видео" color="#FFFC00" 
+				 change="disableVideo();" id="videoSwitch"  
+				 textRollOverColor="#FFFC00" 
+				 textSelectedColor="#FFFC00" 
+				 enabled="true"
+				 visible="false"
+				 selected="true"
+				 showEffect="{fadeIn}"
+				 hideEffect="{fadeOut}"  >
+		<mx:filters>
+			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+		</mx:filters>
+	</mx:CheckBox>
+		
+	<mx:Fade id="fadeOut" duration="200" alphaFrom="1.0" alphaTo="0.0"/>
+    <mx:Fade id="fadeIn" duration="200" alphaFrom="0.0" alphaTo="1.0"/>
+	<mx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			public var playing:Boolean = false;
+			public var scrId:String;
+			public var type:String;
+			public var type2:String;
+			[Embed(source="assets/publish.png")]
+			[Bindable]
+			public var imgPublish:Class;
+
+			[Embed(source="assets/unpublish.png")]
+			[Bindable]
+			public var imgUnpublish:Class;
+			
+			private function startup():void{
+				frame.vid.height = this.height;
+				frame.vid.width = this.width;
+				if (type == "master") statInd.visible = true;
+				else statInd.visible = false;
+				if (type == "master") publishInd.visible = true;
+				else publishInd.visible = false;
+				if (type2 == "main"){
+					videoSwitch.visible=false;
+					sound.visible = false;
+				}
+			}
+		
+			private function click(event:MouseEvent):void {
+				
+			
+			
+			}
+			private function mute():void{
+				
+				
+				if (sound.selected) this.frame.ns.receiveAudio(true);
+				else this.frame.ns.receiveAudio(false);
+			}
+			private function disableVideo():void
+			{
+				if (videoSwitch.selected) this.frame.ns.receiveVideo(true);
+				else this.frame.ns.receiveVideo(false);
+			}
+
+			private function showElems(show:Boolean):void{
+				//if (!frame.active) return;
+				if (type2 == "main") return;
+				if (show){
+					sound.visible = true;
+					videoSwitch.visible = true;
+				}
+				else {
+					sound.visible = false;
+					videoSwitch.visible = false;
+				}
+			}
+			private function stop():void{
+				if (this.playing){
+					/*this.frame.ns.close();
+					this.playing = false;
+					this.frame.vid.clear();
+					this.frame.stream = "";*/
+					Application.application.my_nc.call("stopPreview",null,this.scrId);
+					
+				}
+			}
+			
+			private function publishMaster():void
+			{
+				var scrs:ArrayCollection = Application.application.previewScrs;
+				
+				if (this.playing){
+					
+					Application.application.my_nc.call("setMaster", null, this.frame.stream);
+					/*for (var i:int = 0; i < scrs.length; i++)
+					{
+						if (scrs.getItemAt(i).frame.stream == this.frame.streamname)
+						{
+							this.frame.ns.receiveAudio(false);
+							this.sound.selected = false;
+							this.sound.invalidateProperties();
+						}
+						else
+						{
+							if (scrs.getItemAt(i).frame.stream != Application.application.myname)
+							{
+								scrs.getItemAt(i).frame.stream.frame.ns.receiveAudio(true);
+								scrs.getItemAt(i).frame.stream.sound.selected = true;
+								scrs.getItemAt(i).frame.stream.sound.invalidateProperties();
+							}
+						}
+					
+					
+					}
+					*/
+				}
+			}
+		]]>
+	</mx:Script>
+	<mx:Label text="" fontWeight="bold" color="#F6FF00" id="strname" left="2" top="1">
+	 <mx:filters>
+            <mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4"/>
+        </mx:filters>
+    </mx:Label>
+    
+	
+	
+	<mx:Image x="23" y="34" source="{imgPublish}" click="publishMaster();" toolTip="Опубликовать" id="statInd" right="2" bottom="2" />
+	<mx:Image x="71" y="33" source="{imgUnpublish}" click="stop();" toolTip="Выключить" id="publishInd" right="2" top="2" />
+</mx:Module>

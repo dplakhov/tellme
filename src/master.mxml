@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="645" height="378" xmlns:ns1="*" creationComplete="startup();">
+	<ns1:netdisp x="10" y="10" id="s1">
+	</ns1:netdisp>
+	<ns1:netdisp x="168" y="10" id="s2">
+	</ns1:netdisp>
+	<ns1:netdisp x="326" y="10" id="s3">
+	</ns1:netdisp>
+	<ns1:netdisp x="484" y="10" id="s4">
+	</ns1:netdisp>
+	<ns1:netdisp x="10" y="131" id="s5">
+	</ns1:netdisp>
+	<ns1:netdisp x="168" y="131" id="s6">
+	</ns1:netdisp>
+	<ns1:netdisp x="326" y="131" id="s7">
+	</ns1:netdisp>
+	<ns1:netdisp x="484" y="131" id="s8">
+	</ns1:netdisp>
+	<ns1:netdisp x="168" y="252" id="s9">
+	</ns1:netdisp>
+	<ns1:netdisp x="326" y="252" id="s10">
+	</ns1:netdisp>
+	<mx:Fade id="fadeOut" duration="200" alphaFrom="1.0" alphaTo="0.0"/>
+    <mx:Fade id="fadeIn" duration="200" alphaFrom="0.0" alphaTo="1.0"/>
+
+	<mx:Script>
+		<![CDATA[
+			import mynetconnection.MyNetConnection;
+			import routines.Netvid;
+			import mx.controls.Alert;
+			import mx.collections.ArrayCollection;
+			
+			public var myname:String;
+			public var username:String;
+			public var serverip:String;
+			public var red5server:String;
+			private var my_nc:MyNetConnection;
+			private var connected:Boolean;
+			private var so:SharedObject;
+			private var src_ns:NetStream;
+			private var cam:Camera;
+			private var mic:Microphone;
+			[Bindable]
+			private var cameras:ArrayCollection = new ArrayCollection(Camera.names);
+			[Bindable]
+			private var mics:ArrayCollection = new ArrayCollection(Microphone.names);
+			
+			
+
+			
+			private function startup():void
+			{
+				myname = "dplakhov";
+				username = "agorodishenin,mbogdanov,dchenosov,silyin";
+				serverip = "192.168.0.211"; 
+
+				if (Application.application.parameters.myname != null) myname = Application.application.parameters.myname;
+				if (Application.application.parameters.username != null) username = Application.application.parameters.username;
+				if (Application.application.parameters.ip != null) serverip = Application.application.parameters.ip;
+				red5server = "rtmp://"+serverip+"/oflaDemo/";
+				my_nc = new MyNetConnection();
+				my_nc.addEventListener("netStatus", OnNCStatus);
+				my_nc.connect(red5server);
+				
+				
+			}
+			
+			
+			
+			private function fillstreams(streams:Array):void{
+				var i:int;
+				var n:String;
+				var o:netdisp;
+				//var streams:Array;
+				//streams = username.split(",");
+				//streams = strs.split(",");
+				
+				for (i=1;i<=streams.length;i++){
+					if (i>10) break;
+					if (streams[i-1] != myname){
+						n = "s"+i.toString();
+						o = Application.application.getChildByName(n) as netdisp;
+						o.frame.initnet(my_nc);
+						o.frame.ns.play(streams[i-1]);
+						//o.frame.ns.play("agorodishenin");
+						o.frame.ns.receiveAudio(false);
+						o.strname.text = streams[i-1];
+						o.frame.active = true;
+						o.statInd.setStyle("backgroundColor",0x00FF00);
+						o.statInd.toolTip = "Online";
+						o.sound.enabled = true;
+					}
+				}
+
+				
+			}
+			
+			
+			
+			private function OnNCStatus(event:NetStatusEvent):void {
+				var errtext:String;
+				if(event.info.code == "NetConnection.Connect.Success") {
+					connected = true;
+					so = SharedObject.getRemote("message", my_nc.uri, false);
+			    	so.client = this;
+			    	so.connect(my_nc);
+				
+					if (Camera.names.length > 0)
+					{
+						
+						src_ns = new NetStream(my_nc);
+						src_ns.addEventListener(NetStatusEvent.NET_STATUS,publishStatus);
+						initcam();
+						initmic();
+						//src_ns.publish(myname);
+						
+					}
+					
+					else
+					{
+						
+						//Веб-камера не обнаружена
+					}
+				my_nc.call("getStreams",null,myname);
+				
+				}
+				
+				else  {
+					errtext += event.info.code+"\n";
+					errtext += event.info.description+"\n";
+					Alert.show("Ошибка соединения.\n"+errtext);
+				}
+				
+				
+			}
+			
+			private function publishStatus(event:NetStatusEvent):void{
+				switch (event.info.code){
+					case "NetStream.Publish.BadName":
+						Alert.show("Трансляция с именем "+event.info.details+" уже существует");			
+						break;
+
+					case "NetStream.Publish.Start":
+						startstr.label = "Остановить";
+						mystatus.text = "Online";
+						mystatus.setStyle("color",0x00FF00);			
+						break;
+					case "NetStream.Unpublish.Success":
+						startstr.label = "Начать трансляцию";
+						mystatus.text = "Offline";
+						mystatus.setStyle("color",0xFF0000);			
+						break;				
+					default:
+						mystatus.text = event.info.code;
+						Alert.show(event.info.description);
+					}
+				
+			/*	if (event.info.code == "NetStream.Publish.BadName") 
+				
+				if (event.info.code == "NetStream.Publish.Start"){
+					startstr.label = "Остановить";
+					mystatus.text = "Online";
+					mystatus.setStyle("color",0x00FF00);			
+				}
+				if (event.info.code == "NetStream.Unpublish.Success"){
+					startstr.label = "Начать трансляцию";
+					mystatus.text = "Offline";
+					mystatus.setStyle("color",0xFF0000);			
+				}*/
+				
+			}
+			
+			public function recieveStreamList(...args):void {
+				
+				fillstreams(args);
+			}
+			
+			public function newStream(...args):void {
+				var i:int;
+				var n:String;
+				var o:netdisp;
+				if (args[0] == myname) return;
+				for(i=1;i<=10;i++){
+					n = "s"+i.toString();
+					o = Application.application.getChildByName(n) as netdisp;
+					if (!o.frame.active) {
+						o.frame.initnet(my_nc);
+						o.frame.ns.play(args[0]);
+						o.frame.ns.receiveAudio(false);
+						o.strname.text = args[0];
+						o.frame.active = true;
+						o.statInd.setStyle("backgroundColor",0x00FF00);
+						o.statInd.toolTip = "Online";
+						o.sound.enabled = true;
+						break;
+					}
+				}
+			}
+			
+			public function removedStream(...args):void {
+				var i:int;
+				var n:String;
+				var o:netdisp;
+				if (args[0] == myname) return;
+				for(i=1;i<=10;i++){
+					n = "s"+i.toString();
+					o = Application.application.getChildByName(n) as netdisp;
+					if (o.strname.text == args[0]){
+						o.frame.active = false;
+						o.strname.text = "";
+						o.statInd.setStyle("backgroundColor",0xFF0000);
+						o.statInd.toolTip = "Offline";
+						o.sound.enabled = false;
+						o.sound.selected = false;
+						
+						break;
+					}
+				}
+			}
+			
+			
+			public function initcam():void{
+				cam = Camera.getCamera(camlist.selectedIndex.toString());
+				cam.setMode(320,240,20);
+				cam.setQuality(0,int("85"));	
+				txdisp.attachCamera(cam);
+				src_ns.attachCamera(cam);
+				
+			}
+			
+			public function initmic():void{
+				mic = Microphone.getMicrophone(miclist.selectedIndex);
+				mic.setUseEchoSuppression(true);
+				src_ns.attachAudio(mic);
+			}
+
+			public function startclick():void{
+				if (startstr.label == "Начать трансляцию"){ 
+					src_ns.publish(myname);
+				}
+				else{
+					src_ns.close();
+					
+				} 
+			}
+		]]>
+	</mx:Script>
+	<mx:VideoDisplay x="10" y="252" width="150" height="113" id="txdisp"/>
+	<mx:Button x="484" y="343" label="Настройки" width="151" click="settw.visible=true;" id="settb"/>
+	<mx:Canvas showEffect="{fadeIn}" hideEffect="{fadeOut}" x="99.5" y="131" width="414" height="108" borderStyle="solid" borderThickness="5" cornerRadius="6" borderColor="#FFFFFF" backgroundColor="#FFFFFF" id="settw" visible="false">
+		<mx:ComboBox x="94" y="10" id="camlist" change="initcam();" dataProvider="{cameras}" width="286"></mx:ComboBox>
+		<mx:ComboBox x="94" y="38" id="miclist" change="initmic();" dataProvider="{mics}" width="286"></mx:ComboBox>
+		<mx:Label x="10" y="10" text="Камера" fontWeight="bold" fontSize="12"/>
+		<mx:Label x="10" y="38" text="Микрофон" fontWeight="bold" fontSize="12"/>
+		<mx:Button x="304" y="68" label="Закрыть" click="settw.visible=false;"/>
+	</mx:Canvas>
+	<mx:Button x="484" y="252" label="Начать трансляцию" id="startstr" click="startclick();" width="151"/>
+	<mx:Label x="484" y="282" id="mystatus" fontSize="12" fontWeight="bold" text="Offline" color="#FF0000"/>
+	<mx:TextInput x="484" y="301" width="98" id="nnn" visible="true"/>
+	<mx:Button x="590" y="301" label="Set" click="myname=nnn.text;" visible="true"/>
+</mx:Application>

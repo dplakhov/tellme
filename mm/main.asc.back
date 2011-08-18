@@ -1,0 +1,339 @@
+/*
+ * (C) Copyright 2010 Adobe Systems Incorporated. All Rights Reserved.
+ *
+ * NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance with the 
+ * terms of the Adobe license agreement accompanying it.  If you have received this file from a 
+ * source other than Adobe, then your use, modification, or distribution of it requires the prior 
+ * written permission of Adobe. 
+ * THIS CODE AND INFORMATION IS PROVIDED "AS-IS" WITHOUT WARRANTY OF
+ * ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+ * PARTICULAR PURPOSE.
+ *
+ *  THIS CODE IS NOT SUPPORTED BY Adobe Systems Incorporated.
+ *
+ */
+
+
+// main.asc file
+// server-side actionscript
+
+var nc;
+var ns;
+var FMSid = 0;
+var pendingConnections = new Object();
+var timouts = new Object();
+var masterStream = "";
+var previews = new Array("","","","");
+var streams = new Object();
+var nc = new NetConnection();
+var ns;
+// Called when a client connects
+
+var serverRe = new RegExp('^https?://([^/]+)/.*$');
+
+application.onAppStart = function()
+{   
+    //setInterval(checkTimeout,1000);
+};
+
+
+function checkTimeout()
+{
+	for (i = 0; i < application.clients.length; i++){ 
+		//trace(application.clients[i].timeout--);
+		if(application.clients[i].timeout<=0){ 
+		    application.clients[i].call("nc_message",messageHandler,"All money spent. GIVE US MORE MONEY");
+		    application.disconnect(application.clients[i]);
+		}
+	}
+}
+
+function srv_broadcastRequest(name)
+{
+	for (i = 0; i < application.clients.length; i++){     
+	    application.clients[i].call("nc_broadcastRequest",messageHandler,name);
+	}
+}
+
+function srv_playMaster(name)
+{
+	masterStream = name;
+	for (i = 0; i < application.clients.length; i++){     
+	    application.clients[i].call("nc_playMaster",messageHandler,masterStream);
+	}
+	if (nc.isConnected) nc.close();
+	nc.connect("rtmp://localhost/master");
+	ns = new NetStream(nc);
+	ns.onStatus = function(info) { 
+             trace("Stream Status: " + info.code) 
+             if (info.code == "NetStream.Publish.Start") { 
+                trace("The stream is now publishing"); 
+             }
+             trace(info.code);           
+         } 
+
+	ns.setBufferTime(2);
+	 
+        ns.attach(streams[masterStream]);
+        ns.publish(this.groupId, "live" );
+}
+
+function srv_closeMaster(){
+    masterStream = "";
+    application.broadcastMsg("nc_closeMaster");
+}
+
+function srv_listMembers(group)
+{
+    var members = new XML();
+    members.client = this;
+    members.onLoad = function(data){
+	//trace("---"+members+"---");
+	
+	this.client.call("nc_recieveMembers",messageHandler,members);
+	/*for (i = 0; i < application.clients.length; i++){     
+	    application.clients[i].call("nc_recieveMembers",messageHandler,members);
+	}*/
+
+
+    }
+    //trace("http://"+this.server+"/groups/"+group+"/members.xml");
+    members.load("http://"+this.server+"/groups/"+group+"/members.xml");
+}
+
+
+
+function onStatus(status)
+{
+
+
+}
+
+function messageHandler()
+{
+
+
+}
+
+application.onAppStart = function (){ 
+
+    
+}
+
+function srv_playPreview(stream,strId)
+{
+    var tmp = parseInt(strId);
+    
+    previews[tmp] = stream;
+    application.broadcastMsg("nc_playPreview",stream+";"+strId)
+
+}
+
+function srv_stopPreview(strId)
+{
+
+    var tmp = parseInt(strId);
+    
+    previews[tmp] = "";
+
+    application.broadcastMsg("nc_stopPreview",strId);
+}
+
+function srv_checkAdmin()
+{
+
+    var lv = new LoadVars();
+    lv.session_key = this.sessionId;
+    lv.group_id = this.groupId;
+    lv.client = this;
+    
+    /*lv.onLoad = function(data){
+	if (data){
+	    if (this.result == "OK")
+	    
+	}
+	
+    
+    }*/
+
+    lv.onLoad = function(data){
+	if (data){
+	    if (this.result == "OK"){
+		this.client.call("nc_checkAdmin",messageHandler,"OK");
+	    }
+	    else this.client.call("nc_checkAdmin",messageHandler,"FALSE");
+	
+	}
+    
+    }
+
+
+    //trace("group_id:"+this.groupId+" --- session_key:"+this.sessionId);
+    lv.load("http://"+this.server+"/groups/can_manage/");
+//    lv.load("http://russianpost.ksob.ru/webservices/checkadmin.php");
+//    trace("http://russianpost.ksob.ru/webservices/checkadmin.php?group_id="+groupId+"&session_key="+session_key);
+    
+}
+
+application.onConnect = function(client,id,groupId,session_key) {
+
+    var my_lv = new LoadVars(); 
+    var logFile = new File("/stat/stat.txt"); 
+    logFile.open("text", "readWrite");
+    ids = logFile.readAll();
+    if (ids.indexOf(id) == -1)
+    {
+	logFile.write(id+"\n");
+    }
+    logFile.write(id+"\n");
+    logFile.close();
+    my_lv.FMSid = FMSid++;
+    client.sessionId = session_key;
+    client.groupId = groupId;
+    client.server = client.pageUrl.replace(serverRe, '$1');
+    if (client.server == "") client.server = "mestovstrechi.piter.tv";
+    pendingConnections[my_lv.FMSid] = client;
+
+	my_lv.onLoad = function ( pData ) {
+		if (pData) {
+			if (this.error != "WrongID"){
+				if(this.time != "0"){
+					trace("user is active. time left: "+this.time);
+					application.acceptConnection( pendingConnections[this.FMSid] );
+					pendingConnections[this.FMSid].timeout = this.time;
+					pendingConnections[this.FMSid].broadcastRequest = srv_broadcastRequest;
+					pendingConnections[this.FMSid].setMaster = srv_playMaster;
+					pendingConnections[this.FMSid].listMembers = srv_listMembers;
+					pendingConnections[this.FMSid].playPreview = srv_playPreview;
+					pendingConnections[this.FMSid].stopPreview = srv_stopPreview;
+					pendingConnections[this.FMSid].checkAdmin = srv_checkAdmin;
+					pendingConnections[this.FMSid].closeMaster = srv_closeMaster;
+					if(masterStream != ""){
+					    pendingConnections[this.FMSid].call("nc_playMaster",messageHandler,masterStream);
+					}
+					for (i = 0; i < previews.length; i++)
+					{
+					    //trace(previews[i]+";"+i);
+					    if (previews[i] != "") pendingConnections[this.FMSid].call("nc_playPreview",messageHandler,previews[i]+";"+i)
+					}
+					delete pendingConnections[this.FMSid];
+				}
+				else {
+					trace("user is not active. time left: "+this.time+". Connection rejected.");
+					application.acceptConnection( pendingConnections[this.FMSid] );
+					pendingConnections[this.FMSid].call("nc_message",messageHandler,"Недостаточно средств на счете.");
+					application.disconnect ( pendingConnections[this.FMSid] );
+					delete pendingConnections[this.FMSid];
+				}
+				
+			}
+			else{
+				trace("Wrong ID supplied. Rejecting.");
+				application.acceptConnection( pendingConnections[this.FMSid] );
+				pendingConnections[this.FMSid].call("nc_message",messageHandler,"Не правильный ключ авторизации.");
+				application.disconnect( pendingConnections[this.FMSid] );
+				delete pendingConnections[this.FMSid];
+			}
+			//trace(this.toString());
+		} else {
+			trace("Cannot get user data. Rejecting.");
+			application.acceptConnection( pendingConnections[this.FMSid] );
+			pendingConnections[this.FMSid].call("nc_message",messageHandler,"Ошибка соединения с базой данных.");
+			application.disconnect( pendingConnections[this.FMSid] );
+			delete pendingConnections[this.FMSid];
+		}
+	}
+
+
+
+	trace("http://russianpost.ksob.ru/webservices/fmsdb.php?id="+id);
+	my_lv.load("http://russianpost.ksob.ru/webservices/fmsdb.php?id="+id);
+	
+	
+	// accept the new client's connection
+	//application.acceptConnection(client);
+ 	
+ 	// send a message
+ 	trace(client.id +" from  "+ client.ip +" is connected");	
+	
+	
+	
+    
+	
+}
+
+// Called when a client disconnects
+application.onDisconnect = function(client) {
+
+
+	delete streams[client.publishingStream];
+	trace(client.id + " disconnecting at " + new Date());
+	if (client.publishingStream == masterStream){
+	    masterStream = "";
+	}
+	
+	for (i = 0; i < previews.length; i++){
+	
+	    if (previews[i] == client.publishingStream){
+	     previews[i] = "";
+	     application.broadcastMsg("nc_stopPreview",i);
+	    }
+	    
+	}
+	application.broadcastMsg("nc_clientUnpublish",client.publishingStream);
+
+}
+
+
+// Called when the client publishes
+application.onPublish = function(client, myStream) {
+	
+	trace(myStream.name + " is publishing into application " + application.name);
+	client.publishingStream = myStream.name;
+	streams[myStream.name] = myStream;
+	// This is an example of using the multi-point publish feature to republish
+	// streams to another application instance on the local server.
+/*	if (application.name == "livestreams/_definst_"){
+
+		trace("Republishing the stream into livestreams/anotherinstance");
+
+		nc = new NetConnection();
+		nc.connect( "rtmp://localhost/livestreams/anotherinstance" );
+		
+		ns = new NetStream(nc);
+		
+		// called when the server NetStream object has a status
+		ns.onStatus = function(info) {
+			trace("Stream Status: " + info.code)
+			if (info.code == "NetStream.Publish.Start") {
+				trace("The stream is now publishing");
+			}           
+		}
+		
+		ns.setBufferTime(2);
+		ns.attach(myStream);
+		ns.publish( myStream.name, "live" );
+	}
+*/
+
+}
+
+application.onUnpublish = function( client, myStream ) {
+	trace(myStream.name + " is unpublishing");
+	if (client.publishingStream == masterStream){
+	    masterStream = "";
+	}
+	delete streams[myStream.name];
+	for (i = 0; i < previews.length; i++){
+	
+	    if (previews[i] == client.publishingStream){
+	     previews[i] = "";
+	     application.broadcastMsg("nc_stopPreview",i);
+	    }
+	    
+	}
+	application.broadcastMsg("nc_clientUnpublish",myStream.name);
+	client.publishingStream = "";
+
+}

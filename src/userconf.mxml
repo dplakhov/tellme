@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<!-- controls\videodisplay\VideoDisplayCamera.mxml -->
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"  
+				layout="absolute" 
+				width="800" height="600" 
+				creationComplete="startup();" 
+				color="#0B333C" 
+				applicationComplete="scaleapp();"
+				
+				xmlns:routines="routines.*" xmlns:ns1="*" backgroundColor="#000000">
+	<mx:Script source="userconf_logic.as"/>
+	<mx:Fade id="fadeOut" duration="200" alphaFrom="1.0" alphaTo="0.0"/>
+	<mx:Fade id="fadeIn" duration="200" alphaFrom="0.0" alphaTo="1.0"/>
+	<mx:Glow id="glowFilter" duration="200"
+            alphaFrom="1.0" alphaTo="0.3"
+            blurXFrom="0.0" blurXTo="50.0"
+            blurYFrom="0.0" blurYTo="50.0"
+            color="0x00FF00"/>
+   <mx:Glow id="unglowFilter" duration="200"
+            alphaFrom="0.3" alphaTo="1.0"
+            blurXFrom="50.0" blurXTo="0.0"
+            blurYFrom="50.0" blurYTo="0.0"
+            color="0x0000FF"/>
+            
+	<mx:DataGrid dataProvider="{streamlist}"
+			dragEnabled="false" 
+			allowMultipleSelection="true" 
+			x="617" y="10" width="173" height="550" 
+			id="streamdisp" 
+			
+			fontSize="10" color="#0B333C"
+			itemClick=""
+			itemDoubleClick="ViewStreamClick();">
+		<mx:columns>
+			<mx:DataGridColumn id="selectField" width="14"  resizable="false" sortable="false" >
+				<mx:itemRenderer> 
+					<mx:Component>
+						<mx:CheckBox toolTip="Добавить в список вызова" change="onChange(event);" selectedField="{data.selected}" >
+							<mx:Script>
+								<![CDATA[
+									import mx.controls.Alert;
+									import mx.events.ToolTipEvent;
+									private function onChange(evt:Event):void{
+										data.selected = !data.selected;
+									}
+								]]>
+							</mx:Script>
+						</mx:CheckBox>
+					</mx:Component>
+				</mx:itemRenderer>
+			</mx:DataGridColumn>
+			
+			<mx:DataGridColumn   headerText="Имя" dataField="name"  >
+				<mx:itemRenderer>
+					<mx:Component>
+						<!--<mx:Label  fontWeight="{data.style}" />-->
+						
+						<ns1:customLabel  pending="{data.pending}" fontWeight="{data.style}" />
+						
+						
+												
+					</mx:Component>
+				</mx:itemRenderer>
+			</mx:DataGridColumn>
+			
+			<mx:DataGridColumn id="statusInd" width="20" dataTipField="status" showDataTips="true" resizable="false" sortable="true" dataField="status" headerText="" >
+				<mx:itemRenderer> 
+					<mx:Component>
+						<routines:StatusImage online="{data.online}" status="{data.status}" toolTip="{data.status.substr(1)}"/>
+							
+						
+					</mx:Component>
+				</mx:itemRenderer>
+				
+				
+			</mx:DataGridColumn>
+		
+		</mx:columns>
+	</mx:DataGrid>
+	
+	<mx:VideoDisplay  x="10" y="10" width="599" height="457" id="mainvid" borderStyle="none"  backgroundColor="#000000"/>
+		
+<mx:Panel x="110.5" y="10" width="320.5" height="257" layout="absolute" title="Консоль" id="cons" fontWeight="normal" fontSize="10">
+		<mx:TextArea x="0" y="0" width="300.5" height="177" id="errtext"/>
+		<mx:Button x="112.25" y="185" label="Закрыть" click="cons.visible=false;"/>
+	</mx:Panel>
+	<mx:Button x="617" y="568" label="Вызов" click="MakeCall();" width="173" fontSize="9" id="callButton"/>
+	
+	<mx:VideoDisplay id="myVid" x="10" y="354"
+		 width="151" height="113"
+		 borderThickness="2" borderColor="#E2E2E2" borderStyle="solid" >
+
+	</mx:VideoDisplay>
+	
+	
+	
+	<ns1:clientNetdisp type="master" x="11" y="475" id="preview1" scrId="0">
+	</ns1:clientNetdisp>
+	<ns1:clientNetdisp type="master" x="132" y="475" id="preview2" scrId="1">
+	</ns1:clientNetdisp>
+	<ns1:clientNetdisp type="master" x="253" y="475" id="preview3" scrId="2">
+	</ns1:clientNetdisp>
+	<ns1:clientNetdisp type="master" x="374" y="475" id="preview4" scrId="3">
+	</ns1:clientNetdisp>
+	<ns1:clientNetdisp x="495" y="475" scrId="3" type="master" id="preview5">
+	</ns1:clientNetdisp>
+
+	<mx:Image x="597" y="12" width="10" height="10" toolTip="Закрыть" id="closeMasterInd" source="{imgUnpublish}" click="closeMasterClick();" />
+	<mx:Button x="10" y="568" label="Настройки" click="settingsPanel.visible=true;" id="settButton"/>
+	<mx:Panel showEffect="{fadeIn}" hideEffect="{fadeOut}" x="184" y="266" width="288" height="144" layout="absolute" title="Настройки" id="settingsPanel" visible="false">
+		<mx:Label x="10" y="10" text="Камера" width="73" textAlign="right" fontWeight="bold"/>
+		<mx:ComboBox x="91" y="8" width="160" id="camlist" dataProvider="{cameras}" change="initcam();"></mx:ComboBox>
+		<mx:Label x="10" y="36" text="Микрофон" width="73" textAlign="right" fontWeight="bold"/>
+		<mx:ComboBox x="90.5" y="34" width="160" id="miclist" dataProvider="{mics}" change="initmic();"></mx:ComboBox>
+		<mx:Button x="96" y="72" label="Закрыть" click="settingsPanel.visible=false;"/>
+	</mx:Panel>
+	
+	<mx:Panel x="276" y="105" width="248" height="344" layout="absolute" title="Входящий вызов" id="incomingCallPanel">
+		<mx:DataGrid x="26.5" y="86" width="175"  showHeaders="false" id="membersList">
+			<mx:columns>
+				<mx:DataGridColumn  dataField="name"/>
+			</mx:columns>
+		</mx:DataGrid>
+		<mx:Label x="30" y="10" id="callerName" height="42" width="168" textAlign="center"/>
+		<mx:Label x="29" y="60" text=" " id="membersLabel"/>
+		<mx:Button x="26" y="248" label="Ответить" click="callReply();"/>
+		<mx:Button x="110" y="248" label="Отказаться" click="callReject();"/>
+	</mx:Panel>
+	<mx:Label x="110" y="572" color="#00D2FF" fontWeight="bold" id="mynameLabel"/>
+	<mx:CheckBox change="mute()" id="soundSwitch" x="10" y="11" label="Звук" color="#FFFC00"
+				 textRollOverColor="#FFFC00" 
+				 textSelectedColor="#FFFC00" 
+				 enabled="true"
+				 visible="true"
+				 selected="true"
+				 showEffect="{fadeIn}"
+				 hideEffect="{fadeOut}"  >
+		<mx:filters>
+			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+		</mx:filters>
+	</mx:CheckBox>	
+	
+		
+		
+	<mx:CheckBox change="disableVideo()" id="vidSwitch" x="10" y="31" label="Видео" color="#FFFC00"
+				 textRollOverColor="#FFFC00" 
+				 textSelectedColor="#FFFC00" 
+				 enabled="true"
+				 visible="true"
+				 selected="true"
+				 showEffect="{fadeIn}"
+				 hideEffect="{fadeOut}"  
+				 >
+		<mx:filters>
+			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+		</mx:filters>
+	</mx:CheckBox>
+	
+</mx:Application>

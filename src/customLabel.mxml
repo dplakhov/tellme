@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Label xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="startup();">
+	<mx:Glow repeatCount="0" id="glowFilter" duration="1000"
+            alphaFrom="1.0" alphaTo="0.3"
+            blurXFrom="0.0" blurXTo="50.0"
+            blurYFrom="0.0" blurYTo="50.0"
+            color="0xFF0000"
+            target="{this}"/>
+    <mx:Script>
+    	<![CDATA[
+    		private var t:Timer;
+    		public var pending:Boolean = false;
+    		public var prevStatus:Boolean = false;
+    		private function startup():void{
+    			
+    			t = new Timer(500);
+    			t.addEventListener(TimerEvent.TIMER,onTick);
+    			//glowFilter.play();
+    			t.start();
+    			
+    		}
+    		private function onTick(event:TimerEvent):void{
+    			if (pending != prevStatus){
+	    			if (pending){
+	    				glowFilter.play();
+	    			}
+	    			else{ 
+	    				
+	    				glowFilter.end();
+	    				this.invalidateDisplayList();
+	    				this.invalidateProperties();
+	    				this.invalidateSize();
+	    				
+	    			}
+    				
+    			prevStatus = pending;		
+    			}
+    			
+    			
+    			
+    			
+    			
+    		
+    		}
+    		
+    	]]>
+    </mx:Script>
+</mx:Label>

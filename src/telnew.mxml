@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!-- controls\videodisplay\VideoDisplayCamera.mxml -->
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"  layout="absolute" width="777" height="523" creationComplete="startup();" color="#0B333C" xmlns:routines="routines.*">
+	<mx:Script source="logic.as"/>
+	
+	<mx:Label x="10" y="423" text="FPS:" fontSize="10" fontWeight="bold" addedEffect="glowImage" id="fpslabel" visible="false"/>
+	<mx:Label x="40" y="423" text="0" fontSize="10" fontWeight="bold" id="currfps" addedEffect="glowImage" visible="false"/>
+	<mx:Label x="10" y="472" id="chatwithuser" fontWeight="bold" fontSize="12"/>
+	<mx:Label x="15" y="488" id="me" fontWeight="bold" fontSize="10" text="__"/>
+	<mx:Label x="345" y="495" text="Сервер трансляций:" id="serv" fontSize="10" fontWeight="bold" visible="false"/>
+	<mx:DataGrid 
+			dragEnabled="false" 
+			allowMultipleSelection="false" 
+			x="513" y="10" width="222" height="314" 
+			id="streamdisp" 
+			fontSize="10" color="#0B333C"
+			itemClick="PreViewStreamClick();"
+			itemDoubleClick="ViewStreamClick();">
+		<mx:columns>
+			
+			<mx:DataGridColumn headerText="Имя" dataField="Имя" >
+				<mx:itemRenderer>
+					<mx:Component>
+						<mx:Label fontWeight="{data.style}" />
+													
+					</mx:Component>
+				</mx:itemRenderer>
+			</mx:DataGridColumn>
+		
+		</mx:columns>
+	</mx:DataGrid>
+	
+	<mx:VideoDisplay x="10" y="10" width="495" height="371" id="mainvid"/>
+	<mx:VideoDisplay id="myVid"
+		width="151" height="113" 
+		x="10" y="268" borderThickness="2" borderColor="#E2E2E2" borderStyle="solid" />
+		
+<mx:Panel x="184.5" y="10" width="320.5" height="257" layout="absolute" title="Консоль" id="cons" fontWeight="normal" fontSize="10">
+		<mx:TextArea x="0" y="0" width="300.5" height="177" id="errtext"/>
+		<mx:Button x="112.25" y="185" label="Закрыть" click="cons.visible=false;"/>
+	</mx:Panel>
+	<mx:VideoDisplay x="540" y="362" width="176" height="123" id="preview"/>
+	<mx:Button x="513" y="332" label="Соединиться" click="ViewStreamClick();" width="105"/>
+	<mx:ComboBox x="345" y="389" width="160" id="camlist" dataProvider="{cameras}" change="initcam();"></mx:ComboBox>
+	<mx:ComboBox x="345" y="419" width="160" id="miclist" dataProvider="{mics}" change="initmic();"></mx:ComboBox>
+	<mx:Label x="264" y="391" text="Камера" width="73" textAlign="right" fontWeight="bold"/>
+	<mx:Label x="264" y="421" text="Микрофон" width="73" textAlign="right" fontWeight="bold"/>
+	<mx:Button x="626" y="332" label="Мастер-канал"/>
+	<mx:RadioButtonGroup id="masterselect"/>
+	<mx:RadioButton x="10" y="389" label="Выбранный" groupName="masterselect" fontWeight="bold" id="sel"/>
+	<mx:RadioButton x="10" y="415" label="По-умолчанию" groupName="masterselect" fontWeight="bold" selected="true" id="def"/>
+	<mx:Button x="10" y="442" label="Мастер-канал" click="setmaster();"/>
+	
+</mx:Application>

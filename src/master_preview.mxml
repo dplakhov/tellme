@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="649" height="398"
+				creationComplete="startup();" 
+				applicationComplete="scaleapp();" 
+				rollOver="soundSwitch.visible=true;"
+				rollOut="soundSwitch.visible=false;"
+				xmlns:ns1="*" backgroundColor="#000000">
+	<ns1:netdisp
+				 type2="main" id="master_disp" x="0" y="0" width="530" height="398"  />
+
+	<mx:GlowFilter id = "glowFilter"
+				   color = "0xc0c0c0"
+				   blurX = "16"
+				   blurY = "16"
+				   quality = "3"
+				   alpha = "0.5" />
+	<mx:Fade id="fadeOut" duration="200" alphaFrom="1.0" alphaTo="0.0"/>
+	<mx:Fade id="fadeIn" duration="200" alphaFrom="0.0" alphaTo="1.0"/>
+	<mx:Resize id="makeSmall" duration="300" widthTo="10" heightTo="10"  />
+	<mx:Resize id="makeBig" duration="300" widthTo="151" heightTo="113" />
+	
+	<mx:Move id="moveDown" duration="300" yTo="376" />
+	<mx:Move id="moveUp" duration="300" yTo="273" />
+	
+	<mx:Move id="moveLeft" duration="300" xTo="10" />
+	<mx:Move id="moveRight" duration="300" xTo="147" /> 
+
+	<mx:Script>
+		<![CDATA[
+				import flash.media.Camera;
+				import flash.media.Microphone;
+				import flash.media.Video;
+				import flash.net.NetStream;
+				
+				import mx.collections.ArrayCollection;
+				import mx.controls.Alert;
+				import mx.controls.VideoDisplay;
+				import mx.rpc.http.HTTPService;
+				
+				import mynetconnection.MyNetConnection;
+				
+				import routines.*;
+				
+				[Bindable]
+				private var cameras:ArrayCollection = new ArrayCollection(Camera.names);
+				[Bindable]
+				private var mics:ArrayCollection = new ArrayCollection(Microphone.names);
+
+				public var myname:String;
+				public var username:String;
+				public var serverip:String;
+				public var red5server:String;
+				
+				private var my_nc:MyNetConnection;
+				private var so:SharedObject;
+				private var connected:Boolean;
+				
+				private var upStream:NetStream;
+				private var masterStream:NetStream;
+				
+				private var cam:Camera;
+				private var mic:Microphone;
+				public var group:String;
+				private var streamname:String;
+				private var publishing:Boolean = false;
+				public var client:Object;
+				public var previewScrs:ArrayCollection;
+				public var group_id:String;
+				public var session_key:String;
+				public var groupServer:String;
+				public var getServerResponder:Responder;
+				public var nc:MyNetConnection;
+								
+				private function startup():void{
+					myname = "4d0208c05a481a496a000000";
+					username = "agorodishenin,mbogdanov,dchenosov,silyin";
+					serverip = "109.234.158.4";
+					streamname = "conference";
+					group_id = "4d8889353c6cf92996000000";
+					session_key = "400748e35993d9494be0386599abc6e9";
+					
+					if (Application.application.parameters.myname != null) myname = Application.application.parameters.myname;
+					if (Application.application.parameters.username != null) username = Application.application.parameters.username;
+					if (Application.application.parameters.ip != null) serverip = Application.application.parameters.ip;
+					if (Application.application.parameters.stream != null) streamname = Application.application.parameters.stream;
+					if (Application.application.parameters.group_id != null) group_id = Application.application.parameters.group_id;
+					if (Application.application.parameters.session_key != null) session_key = Application.application.parameters.session_key;
+					//groupServer = "rtmp://"+serverip+"/getserver/";
+					groupServer = "rtmp://"+serverip+"/serverlist/";
+					nc = new MyNetConnection();
+					nc.addEventListener("netStatus", tmpOnNCStatus);
+					//nc.connect(groupServer,group_id);
+					nc.connect(groupServer);
+
+					
+					my_nc = new MyNetConnection();
+					client = new Object();
+					my_nc.client = client;
+					client.nc_playMaster = playMaster;
+					client.nc_message = showMess;
+					client.nc_playPreview = playPreview;
+					client.nc_stopPreview = stopPreview;
+					client.nc_closeMaster = closeMaster;
+					client.nc_requestAccepted = requestAccepted;
+					my_nc.addEventListener("netStatus", OnNCStatus);
+					//my_nc.connect(red5server,"2w3e4r5t");
+					
+					
+					
+					previewScrs = new ArrayCollection();
+					previewScrs.addItem(preview1);
+					previewScrs.addItem(preview2);
+					previewScrs.addItem(preview3);
+					previewScrs.addItem(preview4);
+
+					
+
+				}
+		
+			public function scaleapp():void {
+				//Alert.show("scaleapp");
+				Application.application.stage.addEventListener(Event.FULLSCREEN,resizeStage);
+				//Application.application.stage.scaleMode = "noScale";
+				Application.application.stage.scaleMode = StageScaleMode.SHOW_ALL;
+				Application.application.stage.align = "TL";
+			}
+				public function requestAccepted():void
+				{
+
+				}
+			
+				public function getServerResult(result:String):void
+				{
+					serverip = result;
+					
+					red5server = "rtmp://"+serverip+"/mm/"+group_id;
+					my_nc.connect(red5server,myname);
+				}
+			
+				public function getServerStatus(status:StatusEvent):void
+				{
+					Alert.show("Не могу получить список серверов.");
+				}
+				
+				public function tmpOnNCStatus(event:NetStatusEvent):void{
+						
+						if(event.info.code == "NetConnection.Connect.Success") {
+								getServerResponder = new Responder(getServerResult,getServerStatus);				
+								nc.call("getServer",getServerResponder);
+						}
+						else
+						{
+							//Alert.show("Не могу получить список серверов.");
+						}
+				
+						
+				
+				}
+
+				public function closeMaster():void
+				{
+					master_disp.frame.ns.close();
+					master_disp.frame.vid.clear();
+				
+				}
+				public function playPreview(params:String):void
+				{
+					var arr:Array = params.split(";");
+					var scrId = arr[1];
+					var str = arr[0];
+					
+					previewScrs.getItemAt(parseInt(scrId)).frame.ns.play(str);
+					previewScrs.getItemAt(parseInt(scrId)).visible = true;
+					previewScrs.getItemAt(parseInt(scrId)).frame.stream = str;
+					//Alert.show(scrId+"---"+str);
+				}
+
+				public function stopPreview(scrId):void
+				{
+					previewScrs.getItemAt(parseInt(scrId)).frame.ns.close();
+					previewScrs.getItemAt(parseInt(scrId)).frame.vid.clear();
+					previewScrs.getItemAt(parseInt(scrId)).visible = false;
+					previewScrs.getItemAt(parseInt(scrId)).frame.stream = "";
+				}
+
+				
+				public function showMess(mess:String):void
+				{
+					Alert.show(mess);
+				}
+				private function sendrequest():void {
+					my_nc.call("broadcastRequest", null, myname);
+				}
+				
+				public function playMaster(stream:String):void {
+					//Alert.show(stream+" must be playing");
+					master_disp.frame.ns.play(stream);
+					for (var i:int = 0; i < previewScrs.length; i++)
+					{
+						if (previewScrs.getItemAt(i).frame.stream == stream)
+						{
+							previewScrs.getItemAt(i).frame.ns.receiveAudio(false);
+							previewScrs.getItemAt(i).sound.selected = false;
+							previewScrs.getItemAt(i).sound.invalidateProperties();
+						
+						}
+						else
+						{
+							if (previewScrs.getItemAt(i).frame.stream != myname)
+							{
+								previewScrs.getItemAt(i).frame.ns.receiveAudio(true);
+								previewScrs.getItemAt(i).sound.selected = true;
+								previewScrs.getItemAt(i).sound.invalidateProperties();
+							
+							}
+						}
+					}
+					//Alert.show("Playstream initiated with "+args[0]);
+				}
+				
+				
+				
+				private function OnNCStatus(event:NetStatusEvent):void {
+					var errtext:String;
+
+					if(event.info.code == "NetConnection.Connect.Success") {
+						connected = true;
+						so = SharedObject.getRemote("message", my_nc.uri, false);
+				    	so.client = this;
+				    	so.connect(my_nc);
+						master_disp.frame.initnet(my_nc);
+						preview1.frame.initnet(my_nc);
+						preview2.frame.initnet(my_nc);
+						preview3.frame.initnet(my_nc);
+						preview4.frame.initnet(my_nc);
+						
+						/*if (Camera.names.length > 0)
+						{
+							
+							src_ns = new NetStream(my_nc);
+							initcam();
+							initmic();
+							src_ns.publish(myname);
+						}*/
+						
+						/*else
+						{
+							//cons.visible = true;
+							//errtext.text += "Веб-камера не обнаружена\n";
+						}*/
+
+						/*src_ns2 = new NetStream(my_nc);
+						var vidd:Video = new Video();
+						//vidd.addEventListener(Event.ENTER_FRAME,onPlaying);
+						vidd.attachNetStream(src_ns2);
+						vidd.width = rxdisp.width;
+						vidd.height = rxdisp.height;
+						
+						vidd.deblocking = 2;
+						vidd.smoothing = true;
+						rxdisp.addChild(vidd);
+						src_ns2.play(streamname);*/
+
+					}
+					
+					else  {
+						/*errtext += event.info.code+"\n";
+						errtext += event.info.description+"\n";
+						Alert.show("Ошибка соединения.\n"+errtext);*/
+					}
+					
+					
+				}
+				
+				
+				
+				
+			
+				private function recieveMessage(...args):void{
+					//zaglushka matreshka balalayka
+				}
+			public function mute():void
+			{
+				if (soundSwitch.selected) master_disp.frame.ns.receiveAudio(true);
+				else master_disp.frame.ns.receiveAudio(false);
+				
+			}
+
+			public function toggleFullScreen():void
+			{
+				if (Application.application.stage["displayState"] == StageDisplayState.NORMAL ) Application.application.stage["displayState"] = StageDisplayState.FULL_SCREEN;
+				else Application.application.stage["displayState"] = StageDisplayState.NORMAL;
+				
+			}
+			public function resizeStage(event:FullScreenEvent):void
+			{
+			}
+
+
+
+		]]>
+	</mx:Script>
+	<mx:Zoom id="zoomIn" zoomHeightFrom="0.0" zoomHeightTo="1.0" zoomWidthFrom="0.0" zoomWidthTo="1.0" />
+	<mx:Zoom id="zoomOut" zoomHeightFrom="1.0" zoomHeightTo="0.0" zoomWidthFrom="1.0" zoomWidthTo="0.0" />
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview1" x="533" y="15">
+	</ns1:netdisp>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview2" x="534" y="108">
+	</ns1:netdisp>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview3" x="534" y="201">
+	</ns1:netdisp>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview4" x="533" y="294">
+	</ns1:netdisp>
+
+	<mx:CheckBox change="mute()" id="soundSwitch" x="4" y="1" label="Звук" color="#FFFC00"
+				 textRollOverColor="#FFFC00" 
+				 textSelectedColor="#FFFC00" 
+				 enabled="true"
+				 visible="false"
+				 selected="true"
+				 showEffect="{fadeIn}"
+				 hideEffect="{fadeOut}"   click="mute();">
+		<mx:filters>
+			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+		</mx:filters>
+	</mx:CheckBox>	
+	
+	
+</mx:Application>

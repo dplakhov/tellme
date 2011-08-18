@@ -1,0 +1,596 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="649" height="561"
+				creationComplete="startup();" applicationComplete="scaleapp();" xmlns:ns1="*">
+	<ns1:netdisp type2="main" id="master_disp" x="10" y="12" width="507" height="374" />
+	<mx:VideoDisplay  id="my_disp" 
+		width="151" height="113" 
+		x="10.5" y="273" borderThickness="2" borderColor="#E2E2E2" borderStyle="solid" click="myVidClick()"  />
+	<mx:Button x="339" y="391" label="Попросить голоса" width="178" click="publishStream();" id="publishButton"/>
+
+	<mx:GlowFilter id = "glowFilter"
+				   color = "0xc0c0c0"
+				   blurX = "16"
+				   blurY = "16"
+				   quality = "3"
+				   alpha = "0.5" />
+	<mx:Fade id="fadeOut" duration="200" alphaFrom="1.0" alphaTo="0.0"/>
+	<mx:Fade id="fadeIn" duration="200" alphaFrom="0.0" alphaTo="1.0"/>
+	<mx:Resize id="makeSmall" duration="300" widthTo="10" heightTo="10"  />
+	<mx:Resize id="makeBig" duration="300" widthTo="151" heightTo="113" />
+	
+	<mx:Move id="moveDown" duration="300" yTo="376" />
+	<mx:Move id="moveUp" duration="300" yTo="273" />
+	
+	<mx:Move id="moveLeft" duration="300" xTo="10" />
+	<mx:Move id="moveRight" duration="300" xTo="147" /> 
+
+	<mx:Script>
+		<![CDATA[
+			import flash.media.Camera;
+			import flash.media.Microphone;
+			import flash.media.Video;
+			import flash.net.NetStream;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.controls.VideoDisplay;
+			import mx.formatters.NumberFormatter;
+			import mx.rpc.http.HTTPService;
+			import mx.utils.StringUtil;
+			
+			import mynetconnection.MyNetConnection;
+			
+			import routines.*;
+			import routines.MyNetStream;
+				
+				[Bindable]
+				private var cameras:ArrayCollection = new ArrayCollection(Camera.names);
+				[Bindable]
+				private var mics:ArrayCollection = new ArrayCollection(Microphone.names);
+
+				public var myname:String;
+				public var username:String;
+				public var serverip:String;
+				public var red5server:String;
+				
+				private var my_nc:MyNetConnection;
+				private var so:SharedObject;
+				private var connected:Boolean;
+				
+				private var upStream:MyNetStream;
+				private var masterStream:MyNetStream;
+				private var conferenceOnline:Boolean;
+				private var cam:Camera;
+				private var mic:Microphone;
+				public var group:String;
+				private var streamname:String;
+				private var publishing:Boolean = false;
+				public var client:Object;
+				public var previewScrs:ArrayCollection;
+				public var group_id:String;
+				public var session_key:String;
+				public var groupServer:String;
+				public var getServerResponder:Responder;
+				public var nc:MyNetConnection;
+				private var timer:Timer;
+				private var confDuration:Number;
+				private var d:Date = new Date(0,0,0,0,0,0,0);
+				private var appname:String;	
+			
+				private function startup():void{
+					myname = "4d0633ad4b0a092668000000";
+					username = "agorodishenin,mbogdanov,dchenosov,silyin";
+					serverip = "188.93.21.227";
+					streamname = "conference";
+					group_id = "4dc0462b5da6c73ab600026f";
+					session_key = "d175e83e6e9c04d59de92a509a39de9e";
+					appname = "mmtest";
+					if (Application.application.parameters.myname != null){
+						myname = Application.application.parameters.myname;
+						appname = "mm";
+					} 
+					if (Application.application.parameters.username != null) username = Application.application.parameters.username;
+					if (Application.application.parameters.ip != null) serverip = Application.application.parameters.ip;
+					if (Application.application.parameters.stream != null) streamname = Application.application.parameters.stream;
+					if (Application.application.parameters.group_id != null) group_id = Application.application.parameters.group_id;
+					if (Application.application.parameters.session_key != null) session_key = Application.application.parameters.session_key;
+					//groupServer = "rtmp://"+serverip+"/getserver/";
+					groupServer = "rtmp://"+serverip+"/serverlist/";
+					nc = new MyNetConnection();
+					nc.addEventListener("netStatus", tmpOnNCStatus);
+					//nc.connect(groupServer,group_id);
+					nc.connect(groupServer);
+
+					
+					my_nc = new MyNetConnection();
+					client = new Object();
+					my_nc.client = client;
+					client.nc_setConferenceStatus = setConferenceStatus;
+					client.nc_chatmessage = chatMessage;
+
+					my_nc.addEventListener("netStatus", OnNCStatus);
+					//my_nc.connect(red5server,"2w3e4r5t");
+					
+					
+					pauseLabel.visible = false;
+					previewScrs = new ArrayCollection();
+					previewScrs.addItem(preview1);
+					previewScrs.addItem(preview2);
+					previewScrs.addItem(preview3);
+					previewScrs.addItem(preview4);
+
+					timer = new Timer(1000);
+					timer.addEventListener(TimerEvent.TIMER,timerEvent);
+					
+
+				}
+
+			private function chatMessage(mess):void
+			{
+				chatBox.htmlText += mess+"\n";
+				chatBox.validateNow();
+				chatBox.verticalScrollPosition = chatBox.maxVerticalScrollPosition ;
+				
+			}
+			
+			protected function chatSendButton_clickHandler(event:MouseEvent):void
+			{
+				if (chatSendText.text != "") my_nc.call("sendMessage",null,chatSendText.text);
+				chatSendText.text = "";
+				
+			}
+			protected function chatSendText_keyDownHandler(event:KeyboardEvent):void
+			{
+				switch (event.charCode)
+				{
+					case 13:
+						if (chatSendText.text != "") my_nc.call("sendMessage",null,chatSendText.text);
+						chatSendText.text = "";
+						break;
+				}
+			}
+			
+			
+			public function myVidClick():void
+			{
+				if (my_disp.width == 10){
+					makeBig.play([my_disp]);
+					
+					moveUp.play([my_disp]);
+				} 
+				else{ 
+					makeSmall.play([my_disp]);
+					
+					moveDown.play([my_disp]);
+				}
+				
+				
+				
+				
+			}
+			public function scaleapp():void {
+				//Alert.show("scaleapp");
+				Application.application.stage.addEventListener(Event.FULLSCREEN,resizeStage);
+				//Application.application.stage.scaleMode = "noScale";
+				Application.application.stage.scaleMode = StageScaleMode.SHOW_ALL;
+				Application.application.stage.align = "TL";
+			}
+				public function requestAccepted():void
+				{
+					publishButton.enabled = true;
+				}
+			
+				public function getServerResult(result:String):void
+				{
+					serverip = result;
+					
+					red5server = "rtmp://"+serverip+"/"+appname+"/"+group_id;
+					my_nc.connect(red5server,myname,group_id);
+				}
+			
+				public function getServerStatus(status:StatusEvent):void
+				{
+					Alert.show("Не могу получить список серверов.");
+				}
+				
+				public function tmpOnNCStatus(event:NetStatusEvent):void{
+						
+						if(event.info.code == "NetConnection.Connect.Success") {
+								getServerResponder = new Responder(getServerResult,getServerStatus);				
+								nc.call("getServer",getServerResponder);
+						}
+						else
+						{
+							//Alert.show("Не могу получить список серверов.");
+						}
+				
+						
+				
+				}
+
+				public function closeMaster():void
+				{
+					master_disp.frame.ns.close();
+					master_disp.frame.vid.clear();
+				
+				}
+				public function playPreview(params:String):void
+				{
+					var arr:Array = params.split(";");
+					var str = arr[0];
+					var scrId = arr[1];
+					
+					
+					previewScrs.getItemAt(parseInt(scrId)).frame.ns.play(str);
+					previewScrs.getItemAt(parseInt(scrId)).visible = true;
+					previewScrs.getItemAt(parseInt(scrId)).frame.stream = str;
+					if (str == myname){ 
+						publishButton.enabled = true;
+						previewScrs.getItemAt(parseInt(scrId)).frame.ns.receiveAudio(false);
+						previewScrs.getItemAt(parseInt(scrId)).sound.selected = false;
+						previewScrs.getItemAt(parseInt(scrId)).sound.invalidateProperties();
+						
+					}
+					
+					//Alert.show(scrId+"---"+str);
+				}
+
+				public function stopPreview(scrId):void
+				{
+					previewScrs.getItemAt(parseInt(scrId)).frame.ns.close();
+					previewScrs.getItemAt(parseInt(scrId)).frame.vid.clear();
+					previewScrs.getItemAt(parseInt(scrId)).visible = false;
+					previewScrs.getItemAt(parseInt(scrId)).frame.stream = "";
+				}
+
+				
+				public function showMess(mess:String):void
+				{
+					Alert.show(mess);
+				}
+				private function sendrequest():void {
+					my_nc.call("broadcastRequest", null, myname);
+				}
+				
+				public function playMaster(stream:String):void {
+					
+					master_disp.frame.ns.play(stream);
+					if (stream == myname)
+					{
+						master_disp.frame.ns.receiveAudio(false);
+						soundSwitch.selected = false;
+						soundSwitch.invalidateProperties();
+					}
+					else
+					{
+						master_disp.frame.ns.receiveAudio(true);
+						soundSwitch.selected = true;
+						soundSwitch.invalidateProperties();
+
+					}
+					
+					for (var i:int = 0; i < previewScrs.length; i++)
+					{
+						if (previewScrs.getItemAt(i).frame.stream == stream)
+						{
+							previewScrs.getItemAt(i).frame.ns.receiveAudio(false);
+							previewScrs.getItemAt(i).sound.selected = false;
+							previewScrs.getItemAt(i).sound.invalidateProperties();
+						
+						}
+						else
+						{
+							if (previewScrs.getItemAt(i).frame.stream != myname)
+							{
+								previewScrs.getItemAt(i).frame.ns.receiveAudio(true);
+								previewScrs.getItemAt(i).sound.selected = true;
+								previewScrs.getItemAt(i).sound.invalidateProperties();
+							
+							}
+						}
+					}
+					//Alert.show("Playstream initiated with "+args[0]);
+				}
+				
+				private function publishStream():void{
+				
+					if (!publishing){
+						if (Camera.names.length > 0)
+						{
+							pauseLabel.visible = false;
+							upStream = new MyNetStream(my_nc);
+							initcam();
+							if (Microphone.names.length > 0)initmic();
+							upStream.publish(myname,"append");
+							publishing = true;
+							publishButton.label = "Остановить трансляцию";
+							sendrequest();
+							publishButton.enabled = false;
+						}else Alert.show("Веб-камера не найдена");
+					}
+					else{
+						pauseLabel.visible = true;
+						upStream.close();
+						publishing = false;
+						publishButton.label = "Попросить голоса";
+					}
+				
+				}
+				
+				//private function attachStreams(previews:Array,masterStream:String):void
+				private function attachStreams(result:Object):void
+				{
+					var previews:Array = result.previews as Array;
+					var master:String = result.master as String;
+					var param:String;
+					for (var z:int = 0; z < previews.length; z++)
+					{
+						if (previews[z] != "")
+						{
+							param = previews[z]+";"+z.toString();	
+							playPreview(param);
+						}
+					}
+					if (master != "")
+					{
+						playMaster(master);
+					}
+					
+				}
+				private	function padValue(elem, padChar, finalLength, dir):String
+				{
+					//make sure the direction is in lowercase
+					dir = dir.toLowerCase();
+					//store the elem length
+					var elemLen = elem.toString().length;
+					//check the length for escape clause
+					if(elemLen >= finalLength)
+					{
+						
+						return elem;
+					}
+					//pad the value
+					switch(dir)
+					{
+						
+						default:
+						case 'l':
+							return padValue(padChar + elem, padChar, finalLength, dir);
+							break;
+						case 'r':
+							return padValue(elem + padChar, padChar, finalLength, dir);
+							break;
+					}
+				}
+			
+				private function timerEvent(event:TimerEvent):void
+				{
+					d.setSeconds(confDuration);
+					switch (conferenceOnline)
+					{
+						case true:
+							confDuration++;
+							confStatusText.text = "Конференция идет: " +
+								/*padValue(d.hours,"0",2,"l")+":" +
+								padValue(d.minutes,"0",2,"l")+":" +
+								padValue(d.seconds,"0",2,"l");*/
+							padValue((Math.floor(confDuration/3600)).toString(),"0",2,"l")+":" +
+							padValue((Math.floor(confDuration/60)).toString(),"0",2,"l")+":" +
+							padValue((confDuration%60).toString(),"0",2,"l");
+								
+								
+							break;
+						case false:
+						
+							break;
+					
+					
+					}
+						
+				}
+				private function setConferenceStatus(status:String):void
+				{
+					var duration:Number = parseInt(status.split(";")[1]);
+					status = status.split(";")[0];
+					switch (status){
+						case "offline":
+							client.nc_playMaster = null;
+							client.nc_message = null;
+							client.nc_playPreview = null;
+							client.nc_stopPreview = null;
+							client.nc_closeMaster = null;
+							client.nc_requestAccepted = null;
+							master_disp.frame.ns.play("mp4:/promo/"+group_id+".mp4");
+							master_disp.frame.repeat = true;
+							master_disp.frame.ns.receiveAudio(true);
+							soundSwitch.selected = true;
+							soundSwitch.invalidateProperties();
+							confStatusInd.setStyle("backgroundColor","#FF0000");
+							confStatusText.text = "Конференция закончена";
+							conferenceOnline = false;
+							timer.stop();
+							confDuration = 0;
+							for (var i:int = 0; i < previewScrs.length; i++)
+							{
+								stopPreview(i.toString());
+							}
+						break;
+						
+						case "online":
+							conferenceOnline = true;
+							client.nc_playMaster = playMaster;
+							client.nc_message = showMess;
+							client.nc_playPreview = playPreview;
+							client.nc_stopPreview = stopPreview;
+							client.nc_closeMaster = closeMaster;
+							client.nc_requestAccepted = requestAccepted;
+							my_nc.call("requestStreams",new Responder(attachStreams));
+							master_disp.frame.repeat = false;
+							confStatusInd.setStyle("backgroundColor","#00FF00");
+							timer.start();
+							confDuration = duration;
+							
+						break;
+					
+					}
+				}
+				private function OnNCStatus(event:NetStatusEvent):void {
+					var errtext:String;
+
+					if(event.info.code == "NetConnection.Connect.Success") {
+						connected = true;
+						so = SharedObject.getRemote("message", my_nc.uri, false);
+				    	so.client = this;
+				    	so.connect(my_nc);
+						master_disp.frame.initnet(my_nc);
+						preview1.frame.initnet(my_nc);
+						preview2.frame.initnet(my_nc);
+						preview3.frame.initnet(my_nc);
+						preview4.frame.initnet(my_nc);
+						my_nc.call("getConferenceStatus",new Responder(setConferenceStatus));
+						my_nc.call("getLastMessages",new Responder(recieveLastMessages));
+
+						
+					}
+					
+					else  {
+						/*errtext += event.info.code+"\n";
+						errtext += event.info.description+"\n";
+						Alert.show("Ошибка соединения.\n"+errtext);*/
+					}
+					
+					
+				}
+
+			private function recieveLastMessages(messages:Array):void
+			{	
+				if (messages.length > 0){
+					for (var i:int =0; i< messages.length;i++)
+					{
+							chatBox.htmlText += messages[i]+"\n";
+						
+					}
+				}
+				
+				chatBox.validateNow();
+				chatBox.verticalScrollPosition = chatBox.maxVerticalScrollPosition;	
+			}
+			
+			private function scrolldown():void
+			{
+				
+			 
+				
+				
+			}
+			
+			private function changeCamMode():void
+				{
+					if (cam != null)
+					{
+					if (camRes320.selected) cam.setMode(320,240,20);
+					else cam.setMode(640,480,20);
+					cam.setQuality(0,camQuality.value);
+					}
+					
+				}
+				
+				public function initcam():void{
+					
+					cam = Camera.getCamera(camlist.selectedIndex.toString());
+					if (camRes320.selected) cam.setMode(320,240,20);
+					else cam.setMode(640,480,20);
+					cam.setQuality(0,camQuality.value);	
+					my_disp.attachCamera(cam);
+					upStream.attachCamera(cam);
+					
+					
+				}
+				
+				public function initmic():void{
+					mic = Microphone.getMicrophone(miclist.selectedIndex);
+					mic.codec = SoundCodec.SPEEX;
+					mic.encodeQuality = 10;
+					mic.setSilenceLevel(0);
+
+					mic.setUseEchoSuppression(true);
+					upStream.attachAudio(mic);
+				}
+				
+			
+				private function recieveMessage(...args):void{
+					//zaglushka matreshka balalayka
+				}
+			public function mute():void
+			{
+				if (soundSwitch.selected) master_disp.frame.ns.receiveAudio(true);
+				else master_disp.frame.ns.receiveAudio(false);
+				
+			}
+
+			public function toggleFullScreen():void
+			{
+				if (Application.application.stage["displayState"] == StageDisplayState.NORMAL ) Application.application.stage["displayState"] = StageDisplayState.FULL_SCREEN;
+				else Application.application.stage["displayState"] = StageDisplayState.NORMAL;
+				
+			}
+			public function resizeStage(event:FullScreenEvent):void
+			{
+				if (event.fullScreen) fullScreenButton.label = "В окне";
+				else fullScreenButton.label = "На весь экран";
+				fullScreenButton.invalidateProperties();
+			}
+
+
+
+		]]>
+	</mx:Script>
+	<mx:Zoom id="zoomIn" zoomHeightFrom="0.0" zoomHeightTo="1.0" zoomWidthFrom="0.0" zoomWidthTo="1.0" />
+	<mx:Zoom id="zoomOut" zoomHeightFrom="1.0" zoomHeightTo="0.0" zoomWidthFrom="1.0" zoomWidthTo="0.0" />
+	
+	<mx:Label x="96" y="17" text="Остановлено" width="339" height="45" textAlign="center" color="#FF3030" fontSize="30" id="pauseLabel"/>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview1" x="525" y="12">
+	</ns1:netdisp>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview2" x="526" y="105">
+	</ns1:netdisp>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview3" x="526" y="198">
+	</ns1:netdisp>
+	<ns1:netdisp visible="false" hideEffect="zoomOut" showEffect="zoomIn" id="preview4" x="525" y="291">
+	</ns1:netdisp>
+	<mx:Panel showEffect="{fadeIn}" hideEffect="{fadeOut}" visible="false" x="185" y="70" width="287" height="233" layout="absolute" title="Настройки" id="settingsPanel">
+		<mx:ComboBox x="94" y="10" dataProvider="{mics}" id="miclist" change="initmic();" width="133"></mx:ComboBox>
+		<mx:Label x="10" y="12" text="Микрофон" fontWeight="bold" fontSize="12"/>
+		<mx:ComboBox x="94" y="40" dataProvider="{cameras}" id="camlist" change="initcam();" width="133"></mx:ComboBox>
+		<mx:Label x="31" y="40" text="Камера" fontWeight="bold" fontSize="12"/>
+		<mx:Button x="95.5" y="163" label="Закрыть" click="settingsPanel.visible=false;"/>
+		<mx:HSlider change="changeCamMode();" x="10" y="137" minimum="0" maximum="100" snapInterval="2" width="245" value="85" id="camQuality"/>
+		<mx:Label x="10" y="73" text="Разрешение камеры" fontWeight="bold"/>
+		<mx:RadioButtonGroup change="changeCamMode();" id="streamResolution"/>
+		<mx:RadioButton x="10" y="90" label="640x480" groupName="streamResolution" id="camRes640"/>
+		<mx:RadioButton x="96" y="90" label="320x240" groupName="streamResolution" selected="true" id="camRes320"/>
+		<mx:Label x="10" y="120" text="Качество камеры" fontWeight="bold"/>
+
+	</mx:Panel>
+	<mx:Button x="10" y="391" label="Настройки" click="settingsPanel.visible=true;" width="96"/>
+	<mx:CheckBox change="mute()" id="soundSwitch" x="13" y="14" label="Звук" color="#FFFC00"
+				 textRollOverColor="#FFFC00" 
+				 textSelectedColor="#FFFC00" 
+				 enabled="true"
+				 visible="true"
+				 selected="true"
+				 showEffect="{fadeIn}"
+				 hideEffect="{fadeOut}"   click="mute();">
+		<mx:filters>
+			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+		</mx:filters>
+	</mx:CheckBox>	
+	<mx:Button id="fullScreenButton" x="525" y="391" label="На весь экран" click="toggleFullScreen();" width="114"/>
+	<mx:Canvas x="113" y="398" width="15" height="15" cornerRadius="8" backgroundColor="#FF0000" borderStyle="solid" id="confStatusInd">
+	</mx:Canvas>
+	<mx:Label x="133" y="397" width="198" color="#00D2FF" fontWeight="bold" id="confStatusText"/>
+	<mx:TextArea selectable="true" id="chatBox" x="10" y="421" width="629" height="105" editable="false" />
+	<mx:TextInput id="chatSendText" x="9" y="532" width="536" keyDown="chatSendText_keyDownHandler(event)"/>
+	<mx:Button id="chatSendButton" x="552" y="532" label="Отправить" click="chatSendButton_clickHandler(event)"/>
+	
+	
+</mx:Application>

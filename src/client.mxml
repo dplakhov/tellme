@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="531" height="447"
+				creationComplete="startup();">
+	<mx:VideoDisplay x="14.5" y="10" width="499" height="374" borderStyle="solid" borderColor="#FFFFFF" id="rxdisp"/>
+	<mx:VideoDisplay x="14.5" y="253" width="175" height="131" borderStyle="solid" borderColor="#FFFFFF" id="txdisp"/>
+	<mx:ComboBox x="97" y="392" dataProvider="{cameras}" id="camlist" change="initcam();"></mx:ComboBox>
+	<mx:ComboBox x="97" y="418" dataProvider="{mics}" id="miclist" change="initmic();"></mx:ComboBox>
+	<mx:Label x="15" y="394" text="Камера" fontWeight="bold" fontSize="12"/>
+	<mx:Label x="15" y="420" text="Микрофон" fontWeight="bold" fontSize="12"/>
+	<mx:Button x="375" y="392" label="Попросить голоса" width="141" click="sendrequest();"/>
+	<mx:Script>
+		<![CDATA[
+				import flash.media.Camera;
+				import flash.media.Microphone;
+				import flash.media.Video;
+				import flash.net.NetStream;
+				
+				import mx.collections.ArrayCollection;
+				import mx.controls.Alert;
+				import mx.controls.VideoDisplay;
+				import mx.rpc.http.HTTPService;
+				
+				import mynetconnection.MyNetConnection;
+				
+				import routines.*;
+				
+				[Bindable]
+				private var cameras:ArrayCollection = new ArrayCollection(Camera.names);
+				[Bindable]
+				private var mics:ArrayCollection = new ArrayCollection(Microphone.names);
+
+				public var myname:String;
+				public var username:String;
+				public var serverip:String;
+				public var red5server:String;
+				
+				private var my_nc:MyNetConnection;
+				private var so:SharedObject;
+				private var connected:Boolean;
+				
+				private var src_ns:NetStream;
+				private var src_ns2:NetStream;
+				
+				private var cam:Camera;
+				private var mic:Microphone;
+				
+				private var streamname:String;
+				
+				private function startup():void{
+					myname = "dplakhov";
+					username = "agorodishenin,mbogdanov,dchenosov,silyin";
+					serverip = "192.168.0.211"; 
+					streamname = "conference";
+					if (Application.application.parameters.myname != null) myname = Application.application.parameters.myname;
+					if (Application.application.parameters.username != null) username = Application.application.parameters.username;
+					if (Application.application.parameters.ip != null) serverip = Application.application.parameters.ip;
+					if (Application.application.parameters.stream != null) streamname = Application.application.parameters.stream;
+					
+					red5server = "rtmp://"+serverip+"/oflaDemo/";
+	
+					my_nc = new MyNetConnection();
+					my_nc.addEventListener("netStatus", OnNCStatus);
+					my_nc.connect(red5server);
+					
+
+				}
+				
+				private function OnNCStatus(event:NetStatusEvent):void {
+					var errtext:String;
+
+					if(event.info.code == "NetConnection.Connect.Success") {
+					connected = true;
+					so = SharedObject.getRemote("message", my_nc.uri, false);
+			    	so.client = this;
+			    	so.connect(my_nc);
+					
+						if (Camera.names.length > 0)
+						{
+							
+							src_ns = new NetStream(my_nc);
+							initcam();
+							initmic();
+							src_ns.publish(myname);
+						}
+						
+						else
+						{
+							//cons.visible = true;
+							//errtext.text += "Веб-камера не обнаружена\n";
+						}
+
+						src_ns2 = new NetStream(my_nc);
+						var vidd:Video = new Video();
+						//vidd.addEventListener(Event.ENTER_FRAME,onPlaying);
+						vidd.attachNetStream(src_ns2);
+						vidd.width = rxdisp.width;
+						vidd.height = rxdisp.height;
+						
+						vidd.deblocking = 2;
+						vidd.smoothing = true;
+						rxdisp.addChild(vidd);
+						src_ns2.play(streamname);
+
+					}
+					
+					else  {
+						errtext += event.info.code+"\n";
+						errtext += event.info.description+"\n";
+						Alert.show("Ошибка соединения.\n"+errtext);
+					}
+					
+					
+				}
+				
+				public function initcam():void{
+					cam = Camera.getCamera(camlist.selectedIndex.toString());
+					cam.setMode(320,240,20);
+					cam.setQuality(0,int("85"));	
+					txdisp.attachCamera(cam);
+					src_ns.attachCamera(cam);
+					
+				}
+				
+				public function initmic():void{
+					mic = Microphone.getMicrophone(miclist.selectedIndex);
+					mic.setUseEchoSuppression(true);
+					src_ns.attachAudio(mic);
+				}
+				
+				public function playStream( ...args):void {
+					streamname = args[0];
+					src_ns2.play(streamname);
+				}
+				
+				private function sendrequest():void {
+					my_nc.call("sendMessage", null, myname);
+				}
+				
+				private function recieveMessage(...args):void{
+					//zaglushka
+				}
+
+
+		]]>
+	</mx:Script>
+</mx:Application>

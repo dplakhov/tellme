@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="531" height="395"
+				creationComplete="startup();">
+	<mx:VideoDisplay x="14.5" y="10" width="506.5" height="374" borderStyle="solid" borderColor="#FFFFFF" id="txdisp"/>
+	<mx:Script>
+		<![CDATA[
+			import mx.events.DynamicEvent;
+				import flash.media.Camera;
+				import flash.media.Microphone;
+				import flash.media.Video;
+				import flash.net.NetStream;
+				
+				import mx.collections.ArrayCollection;
+				import mx.controls.Alert;
+				import mx.controls.VideoDisplay;
+				import mx.rpc.http.HTTPService;
+				
+				import mynetconnection.MyNetConnection;
+				
+				import routines.*;
+				
+				[Bindable]
+				private var cameras:ArrayCollection = new ArrayCollection(Camera.names);
+				[Bindable]
+				private var mics:ArrayCollection = new ArrayCollection(Microphone.names);
+
+				public var myname:String;
+				public var username:String;
+				public var serverip:String;
+				public var red5server:String;
+				
+				private var my_nc:MyNetConnection;
+				private var so:SharedObject;
+				private var connected:Boolean;
+				
+				private var src_ns:NetStream;
+				private var src_ns2:NetStream;
+				
+				private var cam:Camera;
+				private var mic:Microphone;
+				
+				private var streamname:String;
+				private var publishing:Boolean = false;
+				public var client:Object;
+				
+				private function startup():void{
+					myname = "dplakhov";
+					username = "agorodishenin,mbogdanov,dchenosov,silyin";
+					//serverip = "192.168.0.211"; 
+					serverip = "188.93.21.227";
+					streamname = "dplakhov";
+					if (Application.application.parameters.myname != null) myname = Application.application.parameters.myname;
+					if (Application.application.parameters.username != null) username = Application.application.parameters.username;
+					if (Application.application.parameters.ip != null) serverip = Application.application.parameters.ip;
+					if (Application.application.parameters.stream != null) streamname = Application.application.parameters.stream;
+					
+					red5server = "rtmp://"+serverip+"/mm/";
+					client = new Object();
+					my_nc = new MyNetConnection();
+					my_nc.client = client;
+					client.nc_message = showMess;
+					my_nc.addEventListener("netStatus", OnNCStatus);
+					my_nc.connect(red5server,"1q2w3e4r");
+					
+
+				}
+				
+				public function showMess(mess:String):void
+				{
+					Alert.show(mess);
+				}
+				
+				
+
+				public function playStream(stream:String):void {
+					
+					src_ns2.play(stream);
+					
+					//Alert.show("Playstream initiated with "+args[0]);
+				}
+
+			
+				
+				private function OnNCStatus(event:NetStatusEvent):void {
+					var errtext:String;
+					switch (event.info.code){
+						case "NetConnection.Connect.Success":
+							connected = true;
+							so = SharedObject.getRemote("message", my_nc.uri, false);
+					    	so.client = this;
+					    	so.connect(my_nc);
+						
+							/*if (Camera.names.length > 0)
+							{
+								
+								src_ns = new NetStream(my_nc);
+								initcam();
+								initmic();
+								src_ns.publish(myname);
+							}*/
+							
+							/*else
+							{
+								//cons.visible = true;
+								//errtext.text += "Веб-камера не обнаружена\n";
+							}*/
+	
+							src_ns2 = new NetStream(my_nc);
+							var vidd:Video = new Video();
+							
+							vidd.attachNetStream(src_ns2);
+							vidd.width = txdisp.width;
+							vidd.height = txdisp.height;
+							
+							vidd.deblocking = 2;
+							vidd.smoothing = true;
+							txdisp.addChild(vidd);
+							src_ns2.play(streamname);
+
+						break;
+						case "NetConnection.Connect.Closed":
+							//Alert.show("В доступе отказано. \nВозможно, недостаточно денег на счете.");
+						break;
+						default:
+							Alert.show("Ошибка соединения с сервером.\nПожалуйста, повторите попытку позднее.");
+							//errtext += event.info.code+"\n";
+							//errtext += event.info.description+"\n";
+							//Alert.show("Ошибка соединения.\n"+errtext);
+						
+						break;
+					}
+					
+					
+				}
+				
+				
+				
+				
+				
+				private function recieveMessage(...args):void{
+					//zaglushka matreshka balalayka
+				}
+
+
+		]]>
+	</mx:Script>
+</mx:Application>

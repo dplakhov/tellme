@@ -1,0 +1,257 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="expires" content="0" />
+    <meta http-equiv="Cache-control" content="no-cache" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+    <link href="/media/images/favicon.ico" rel="shortcut icon" />
+
+    
+    <link href="/media/styles/common.css" rel="stylesheet" type="text/css" />   
+    <link href="/media/styles/chat_style.css" rel="stylesheet" type="text/css" />
+    
+    
+
+    
+    
+    
+
+    <title>Место встречи - PITER.TV</title>
+
+    
+
+
+    <script type="text/javascript" src="/media/js/jquery-1.4.2.min.js"></script>
+    
+    <script type="text/javascript" src="/media/js/jquery.crawlLine.js"></script>
+    <script type="text/javascript" src="/media/js/jquery.form.js"></script>
+    
+    <script type="text/javascript">
+        $(document).ready(function(){
+			$('.marquee').crawlLine({crawElement:'.move'});
+            $('textarea[maxlength]').live('input paste',function(e){
+                var text = $(e.target);
+                var max = parseInt(text.attr('maxlength'));
+                if(text.val().length > max){
+                    text.val(text.val().substr(0, text.attr('maxlength')));
+                }
+
+                text.parent().parent().find('.charsRemaining').html('Осталось ' + (max - text.val().length) + ' символов');
+            });
+        });
+    </script>
+
+    
+
+
+<script type="text/javascript">
+
+function check(id_input, alph) {
+    return function() {
+        var cur_text = id_input.val();
+        var cur_len = cur_text.length;
+        var check_text = '';
+        for (var i = 0; i < cur_len; i++) {
+            var char = cur_text[i];
+            if (alph.indexOf(char) != -1) check_text = check_text + char;
+        }
+        id_input.val(check_text);
+    }
+}
+
+    const ALPH_EMAIL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_@';
+    const ALPH_PASS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_@!#$%^&+= ";
+
+    var id_email = $('#enter_form #id_email');
+    id_email.live('input paste', check(id_email, ALPH_EMAIL));
+
+    var id_pass = $('#enter_form #id_password');
+    id_pass.live('input paste', check(id_pass, ALPH_PASS));
+
+    const ALPH_NAME = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя'`-";
+
+    var id_first_name = $('#id_first_name');
+    id_first_name.live('input paste', check(id_first_name, ALPH_NAME));
+
+    var id_last_name = $('#id_last_name');
+    id_last_name.live('input paste', check(id_last_name, ALPH_NAME));
+
+    var reg_id_email = $('#reg_form #id_email');
+    reg_id_email.live('input paste', check(reg_id_email, ALPH_EMAIL));
+
+    var id_pass1 = $('#id_password1');
+    id_pass1.live('input paste', check(id_pass1, ALPH_PASS));
+    var id_pass2 = $('#id_password2');
+    id_pass2.live('input paste', check(id_pass2, ALPH_PASS));
+
+    function check_phone(e){
+        if ([8,9,13,16,35,36,37,38,39,40,45,46,48,49,50,51,52,53,54,55,56,57].indexOf(e.keyCode) != -1) return true;
+        return false
+    }
+
+    $('#id_phone_0').keydown(check_phone);
+    $('#id_phone_1').keydown(check_phone);
+});
+
+</script>
+
+ 
+</head>
+<body>
+
+<div id="container">
+    <div id="subContainer">
+
+        <div class="head">
+   		   <a href="/"><div class="logo"></div></a>
+   		   
+            
+   		   
+
+           
+		</div> <!-- end head"-->
+
+      		        
+
+        <div id="mainContent">
+       
+       
+
+<div id="call_message"></div>
+
+
+
+
+
+
+
+<div id="regColumn">
+    <div id="enter_form">
+        <div class="title">
+            <div class="title-r">
+                <div class="title-x">
+                    <h2>Вход</h2>
+                </div>
+            </div>
+        </div>
+        <div class="block">
+        <div class="block-b">
+            <form action="" method="post">
+                <input type="hidden" name="form_name" value="login"/>
+            
+            <div style="overflow:hidden">
+            
+                <div class="enter rounded">
+            
+            
+            
+                
+                <p>E-mail:<br/>
+                    <input type="text" name="email" id="id_email" /></p>
+            
+                
+                <p>Пароль:<br/>
+                    <input type="password" name="password" id="id_password" /></p>
+            
+            
+            <p><a href="/lostpassword/">Забыли пароль?</a></p>
+                </div>
+            
+                <p><input class="subEnter" type="submit" value="Войти" /></p>
+            </div>
+            
+            </form>
+                </div>
+                    
+                    </div>    
+    </div>
+</div>
+<div id="regColumn">
+    <div id="enter_form">
+        <div class="title">
+            <div class="title-r">
+                <div class="title-x">
+                    <h2>Регистрация</h2>
+                </div>
+            </div>
+        </div>
+        <div class="block">
+            <div class="block-b">
+                <form action="" method="post">
+<input type="hidden" name="form_name" value="register"/>
+       <div class="hide" style="overflow:hidden">
+        <div class="reg rounded">
+
+<p>*Имя:<br/><input id="id_first_name" type="text" name="first_name" maxlength="64" /></p>
+
+
+<p>*Фамилия:<br/><input id="id_last_name" type="text" name="last_name" maxlength="64" /></p>
+
+<p>*E-mail:<br/><input id="id_email" type="text" name="email" maxlength="64" /></p>
+
+
+<p>Телефон:<br/>+7<input id="id_phone_0" size="3" type="text" name="phone_0" maxlength="3" /><input id="id_phone_1" size="7" type="text" name="phone_1" maxlength="7" /></p>
+
+
+<p>*Пароль:<br/><input id="id_password1" type="password" name="password1" maxlength="64" /></p>
+
+
+<p>*Подтверждение пароля:<br/><input id="id_password2" type="password" name="password2" maxlength="64" /></p>
+
+
+<p>*Введите код на картинке:<br/><input type="hidden" name="captcha_0" value="6d7d6e258d7976d83e8dbda81d2f97ac" id="id_captcha_0" /> <noindex><img src="/captcha/6d7d6e258d7976d83e8dbda81d2f97ac/?0.931792519082" alt="no robots here" width="150" height="100" /></noindex> <input autocomplete="off" type="text" name="captcha_1" id="id_captcha_1" maxlength="4" /> </p>
+        </div>
+            <p style="color:#999999; padding-top: 7px">
+            Фактом регистрации Вы соглашаетесь с
+            <a href="/static/agreement/" target="_blank">Пользовательским соглашением</a>.</p>
+            <p><input class="subReg" type="submit" value="Зарегистрироваться" /></p>
+        </div>
+</form>
+            </div>
+        </div>    
+    </div>
+</div>
+<div id="about">
+    <p>
+    «PITER.TV» - это первое городское интернет-телевидение.
+    </p>
+    <p>
+Наша телевизионная программа, с одной стороны, включает в себя все, что ждет телезритель от городского телеканала: новости, комментарии, расследования, авторские материалы, качественное кино. С другой,  – мы используем все преимущества Интернета.
+    </p>
+    <p>
+«PITER.TV» не навязывает зрителю строго определенную программу передач, а предлагает каждому выбирать для просмотра материалы индивидуально, на свой вкус.
+    </p>
+</div>                
+                    
+
+
+        </div>
+
+    <div id="footer">
+        <div id="info">
+            
+            <p style="width:400px">Интернет-телевидение «PITER.TV» &copy; 2011</p>
+            <p id="design"><a href="http://www.web-mark.ru">Разработка сайта</a> – <a href="http://www.web-mark.ru/clients.html">Web-Mark</a></p>
+
+        </div>
+       <div class="counter" style="text-indent:-9000px"> 
+        <!--LiveInternet counter--><script type="text/javascript"><!--
+document.write("<a href='http://www.liveinternet.ru/click' "+
+"target=_blank><img src='//counter.yadro.ru/hit?t44.6;r"+
+escape(document.referrer)+((typeof(screen)=="undefined")?"":
+";s"+screen.width+"*"+screen.height+"*"+(screen.colorDepth?
+screen.colorDepth:screen.pixelDepth))+";u"+escape(document.URL)+
+";"+Math.random()+
+"' alt='' title='LiveInternet' "+
+"border='0' width='31' height='31'><\/a>")
+//--></script><!--/LiveInternet-->
+    </div>
+    </div>
+</div>
+
+
+</body>
+</html>
