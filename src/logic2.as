@@ -102,15 +102,16 @@
 	public var conferenceStatus:String = "offline";
 	private var appname:String;
 	private var confDuration:Number;
+	private var prvNames:ArrayCollection;
 	public function startup():void {
 		
 		var i:int;
-		myname = "4dc035fc5da6c73aae000246";
+		myname = "4d4974c23c6cf97dab000000";
 		username = "dplakhov,mbogdanov,dchenosov,silyin";
-		serverip = "188.93.21.227";
-		group_id = "4dc0462b5da6c73ab600026f";
-		session_key = "3185a5461aea728bc36f0f4b702bf285";
-		appname = "mmtest";
+		serverip = "46.182.31.245";
+		group_id = "4e4375eaada0255c2e000001";
+		session_key = "f55307327a8b8e45147e31f3982e31fc";
+		appname = "mm";
 		//group = "";
 		if (Application.application.parameters.myname != null){
 			myname = Application.application.parameters.myname;
@@ -139,7 +140,7 @@
 		errtext.text = "";
 		myVid.filters = [shadow];
 		
-		streamlist = new ArrayCollection();
+		//streamlist = new ArrayCollection();
 		streamdisp.dataProvider = streamlist;
 		vipStreamList = new ArrayCollection();
 		vipStreams.dataProvider = vipStreamList;
@@ -164,6 +165,8 @@
 		client.nc_clientUnpublish = clientUnpublish;
 		client.nc_closeMaster = closeMaster;
 		client.nc_chatmessage = chatMessage;
+		client.nc_clientConnected = clientConnected;
+		client.nc_clientDisconnected = clientDisconnected;
 		my_nc.addEventListener("netStatus", OnNCStatus);
 		//my_nc.connect(red5server,"1q2w3e4r",group_id,session_key);
 
@@ -172,6 +175,16 @@
 		previewScrs.addItem(preview2);
 		previewScrs.addItem(preview3);
 		previewScrs.addItem(preview4);
+		prvNames = new ArrayCollection();
+		prvNames.addItem(prvName1);
+		prvNames.addItem(prvName2);
+		prvNames.addItem(prvName3);
+		prvNames.addItem(prvName4);
+		/*for (var i:int = 0; i<prvNames.length; i++)
+		{
+			prvNames.getItemAt(i).filters = [shadow];
+		}*/
+		
 		timer = new Timer(10000);
 		timer.addEventListener(TimerEvent.TIMER,onTick);
 		confTimer = new Timer(1000);
@@ -179,12 +192,68 @@
 		
 				
 	}
-	
+
+	private function clientConnected(id):void
+	{
+		var c:int = 0;
+		var i:int = 0;
+		var tmpObj:Object;
+		for (i = 0; i< streamlist.length; i++)
+		{
+			if(streamlist.getItemAt(i).style == "bold") c++;
+		}
+		
+		for (i = 0; i < streamlist.length; i++)
+		{
+			if (streamlist.getItemAt(i).id == id)
+			{
+				tmpObj = streamlist.getItemAt(i);
+				streamlist.removeItemAt(i);
+				tmpObj.fcolor = 0x00ff00;
+				streamlist.addItemAt(tmpObj,c);
+			}
+		}
+
+		streamdisp.invalidateList();
+		streamdisp.invalidateDisplayList();
+		streamdisp.invalidateProperties();
+		streamdisp.invalidateSize();
+				
+	}
+
+	private function clientDisconnected(id):void
+	{
+		var c:int = 0;
+		var i:int = 0;
+		var tmpObj:Object;
+
+		for (i = 0; i< streamlist.length; i++)
+		{
+			if(streamlist.getItemAt(i).fcolor == 0x00ff00) c++;
+		}
+		for (i = 0; i < streamlist.length; i++)
+		{
+			if (streamlist.getItemAt(i).id == id)
+			{
+				tmpObj = streamlist.getItemAt(i);
+				streamlist.removeItemAt(i);
+				tmpObj.fcolor = 0x000000;
+				streamlist.addItemAt(tmpObj,c);
+			}
+		}
+		
+		streamdisp.invalidateList();
+		streamdisp.invalidateDisplayList();
+		streamdisp.invalidateProperties();
+		streamdisp.invalidateSize();
+				
+	}
+
 	private function chatMessage(mess):void
 	{
 		chatBox.htmlText += mess+"\n";
 		chatBox.validateNow();
-		chatBox.verticalScrollPosition = chatBox.maxVerticalScrollPosition;
+		chatBox.verticalScrollPosition = chatBox.maxVerticalScrollPosition+10;
 	}
 
 	protected function chatSendButton_clickHandler(event:MouseEvent):void
@@ -259,6 +328,9 @@
 					
 					previewScrs.getItemAt(i).playing = true;
 					previewScrs.getItemAt(i).visible = true;
+					if (vipStreams.selectedItem.name <=15) prvNames.getItemAt(i).text = "\n"+vipStreams.selectedItem.name;
+					else prvNames.getItemAt(i).text = vipStreams.selectedItem.name;
+					
 					my_nc.call("playPreview",null,vipStreams.selectedItem.id,i);
 					return;
 				}
@@ -277,7 +349,7 @@
 	protected function streamdisp_itemClickHandler(event:ListEvent):void
 	{
 		var tmpObj:Object;
-		if (event.columnIndex == 1)
+		if (event.columnIndex == 2)
 		{
 			vipStreamList.addItem(streamdisp.selectedItem);
 			streamlist.removeItemAt(streamdisp.selectedIndex);
@@ -386,6 +458,7 @@
 		previewScrs.getItemAt(parseInt(scrId)).frame.stream = "";
 		previewScrs.getItemAt(parseInt(scrId)).playing = false;
 		previewScrs.getItemAt(parseInt(scrId)).visible = false;
+		prvNames.getItemAt(parseInt(scrId)).text = "";
 	}
 
 	public function checkAdmin(param:String):void{
@@ -453,7 +526,6 @@
 				toggleConferenceButton.invalidateProperties();
 				confStatusInd.setStyle("backgroundColor","#FF0000");
 				confStatusText.text = "Конференция закончена";
-				
 				break;
 			
 			
@@ -463,7 +535,6 @@
 				confStatusInd.setStyle("backgroundColor","#00FF00");
 				confDuration = duration;
 				confTimer.start();
-				
 				break;
 			
 		}
@@ -481,10 +552,25 @@
 		
 		chatBox.verticalScrollPosition = chatBox.maxVerticalScrollPosition;
 	}
-	public function recieveMembers(members:XMLDocument):void
+	public function recieveMembers(members:XMLDocument,connected:Array):void
 	{
+		var c:int = 0;
+		var i:int = 0;
+		var o:Object;
+		for (i = 0; i < connected.length; i++)
+		{
+			if (connected[i] != null) c++;	
+		}
+		membersCount.text = "Участников: "+c;
+		fillstreamlist(members,connected);
+		/*for (i = 0; i<connected.length; i++)
+		{
+			if (connected[i] != null)
+			{
+				clientConnected(connected[i]);
+			}
 		
-		fillstreamlist(members);
+		}*/
 		timer.start();
 		my_nc.call("getConferenceStatus",new Responder(setConferenceStatus));
 		
@@ -504,9 +590,10 @@
 		
 	}
 
-	public function playMaster(stream:String):void
+	public function playMaster(stream:String,fullname:String):void
 	{
 		src_ns2.play(stream);
+		mastername.text = fullname;
 		if (stream == myname)
 		{
 			src_ns2.receiveAudio(false);
@@ -572,6 +659,8 @@
 					
 		 			previewScrs.getItemAt(i).playing = true;
 					previewScrs.getItemAt(i).visible = true;
+					if (streamdisp.selectedItem.name.length <= 15) prvNames.getItemAt(i).text = "\n"+streamdisp.selectedItem.name;
+					else prvNames.getItemAt(i).text = streamdisp.selectedItem.name;
 		 			my_nc.call("playPreview",null,streamdisp.selectedItem.id,i);
 		 			streamdisp.selectedItem.pending = false;
 		 			streamdisp.invalidateList();
@@ -597,6 +686,9 @@
 										previewScrs.getItemAt(i).frame.ns.receiveAudio(false);
 										previewScrs.getItemAt(i).sound.selected = false;
 										previewScrs.getItemAt(i).invalidateProperties();
+										if (streamdisp.selectedItem.name.length <= 15) prvNames.getItemAt(i).text = "\n"+streamdisp.selectedItem.name;
+										else prvNames.getItemAt(i).text = streamdisp.selectedItem.name;
+
 							 			my_nc.call("playPreview",null,myname,i);
 						 			}
 									return;
@@ -647,24 +739,47 @@
 		return false;
 	}
 	
-	
-	public function fillstreamlist(members:XMLDocument):void {
+	private function sortByColor(a,b):int
+	{
+		if (a.fcolor < b.fcolor)
+		{
+			return 1;
+		}
+		else if (a.fcolor > b.fcolor)
+		{
+			return -1;
+		}
+		else return 0;
+	}
+		
+
+	public function fillstreamlist(members:XMLDocument,connected:Array):void {
 		var found:Boolean = false;
 		var foundInVip:Boolean = false;
 		var d:SimpleXMLDecoder;
 		d = new SimpleXMLDecoder();
 		var o:Object = d.decodeXML(members);
 		var arr:Array = ArrayUtil.toArray(o.users.user);
+		var i:int = 0;
+		for (var p:int = 0; p<arr.length; p++)
+		{
+			if (connected.lastIndexOf(arr[p].id) != -1) arr[p].fcolor = 0x00ff00;
+			else arr[p].fcolor = 0x000000;
+			if (arr[p].avatar != null) arr[p].image = "http://xn--90acimpsblk.xn--p1ai/file/"+arr[p].avatar+"/avatar_micro.png";
+			else arr[p].image = "http://xn--90acimpsblk.xn--p1ai/media/notfound/avatar_micro.png";
+			arr[p].pending = false;
+		}
+		
+		arr.sort(sortByColor);
+		
+			
 		if (streamlist == null) {
 			
 			streamlist = new ArrayCollection(arr);
-			for (var i = 0; i < streamlist.length; i++ ) {
-				streamlist.getItemAt(i).pending = false;
-			}
 		}
 		else
 		{
-			for (var i:int = 0; i < arr.length; i++)
+			for (i = 0; i < arr.length; i++)
 			{
 				found = false;
 				for (var j:int = 0; j < streamlist.length; j++)
@@ -687,6 +802,7 @@
 					}
 					if (!foundInVip) 
 						streamlist.addItem(arr[i]);
+						if (arr[i].fcolor == 0x00ff00) clientConnected(arr[i].id);
 				}
 			}
 		}
@@ -815,6 +931,7 @@
 	public function closeMaster():void
 	{
 		src_ns2.close();
+		mastername.text = "";
 		vidd.clear();
 
 	}

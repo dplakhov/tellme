@@ -35,6 +35,7 @@
 			import mx.controls.Alert;
 			import mx.controls.VideoDisplay;
 			import mx.formatters.NumberFormatter;
+			import mx.messaging.channels.StreamingAMFChannel;
 			import mx.rpc.http.HTTPService;
 			import mx.utils.StringUtil;
 			
@@ -76,15 +77,15 @@
 				private var confDuration:Number;
 				private var d:Date = new Date(0,0,0,0,0,0,0);
 				private var appname:String;	
-			
+				private var prvNames:ArrayCollection;			
 				private function startup():void{
-					myname = "4d0633ad4b0a092668000000";
+					myname = "4e4e9739ada0257826000000";
 					username = "agorodishenin,mbogdanov,dchenosov,silyin";
-					serverip = "188.93.21.227";
+					serverip = "46.182.31.245";
 					streamname = "conference";
-					group_id = "4dc0462b5da6c73ab600026f";
-					session_key = "d175e83e6e9c04d59de92a509a39de9e";
-					appname = "mmtest";
+					group_id = "4e4375eaada0255c2e000001";
+					session_key = "88e0b7ce17f943acd041363f3cea608d";
+					appname = "mm";
 					if (Application.application.parameters.myname != null){
 						myname = Application.application.parameters.myname;
 						appname = "mm";
@@ -107,6 +108,7 @@
 					my_nc.client = client;
 					client.nc_setConferenceStatus = setConferenceStatus;
 					client.nc_chatmessage = chatMessage;
+					
 
 					my_nc.addEventListener("netStatus", OnNCStatus);
 					//my_nc.connect(red5server,"2w3e4r5t");
@@ -118,6 +120,11 @@
 					previewScrs.addItem(preview2);
 					previewScrs.addItem(preview3);
 					previewScrs.addItem(preview4);
+					prvNames = new ArrayCollection();
+					prvNames.addItem(prvName1);
+					prvNames.addItem(prvName2);
+					prvNames.addItem(prvName3);
+					prvNames.addItem(prvName4);
 
 					timer = new Timer(1000);
 					timer.addEventListener(TimerEvent.TIMER,timerEvent);
@@ -212,6 +219,7 @@
 				{
 					master_disp.frame.ns.close();
 					master_disp.frame.vid.clear();
+					mastername.text = "";
 				
 				}
 				public function playPreview(params:String):void
@@ -219,11 +227,13 @@
 					var arr:Array = params.split(";");
 					var str = arr[0];
 					var scrId = arr[1];
-					
+					var name = arr[2];
 					
 					previewScrs.getItemAt(parseInt(scrId)).frame.ns.play(str);
 					previewScrs.getItemAt(parseInt(scrId)).visible = true;
 					previewScrs.getItemAt(parseInt(scrId)).frame.stream = str;
+					if (name.length <= 15) prvNames.getItemAt(parseInt(scrId)).text = "\n"+name;
+					else prvNames.getItemAt(parseInt(scrId)).text = name;
 					if (str == myname){ 
 						publishButton.enabled = true;
 						previewScrs.getItemAt(parseInt(scrId)).frame.ns.receiveAudio(false);
@@ -241,6 +251,7 @@
 					previewScrs.getItemAt(parseInt(scrId)).frame.vid.clear();
 					previewScrs.getItemAt(parseInt(scrId)).visible = false;
 					previewScrs.getItemAt(parseInt(scrId)).frame.stream = "";
+					prvNames.getItemAt(parseInt(scrId)).text = "";
 				}
 
 				
@@ -252,8 +263,8 @@
 					my_nc.call("broadcastRequest", null, myname);
 				}
 				
-				public function playMaster(stream:String):void {
-					
+				public function playMaster(stream:String,fullname:String):void {
+					mastername.text = fullname;
 					master_disp.frame.ns.play(stream);
 					if (stream == myname)
 					{
@@ -322,18 +333,20 @@
 				{
 					var previews:Array = result.previews as Array;
 					var master:String = result.master as String;
+					var fullname:String = result.mastername as String;
+					var prvNames:Array = result.prvnames as Array;
 					var param:String;
 					for (var z:int = 0; z < previews.length; z++)
 					{
 						if (previews[z] != "")
 						{
-							param = previews[z]+";"+z.toString();	
+							param = previews[z]+";"+z.toString()+";"+prvNames[z];	
 							playPreview(param);
 						}
 					}
 					if (master != "")
 					{
-						playMaster(master);
+						playMaster(master,fullname);
 					}
 					
 				}
@@ -442,6 +455,7 @@
 						so = SharedObject.getRemote("message", my_nc.uri, false);
 				    	so.client = this;
 				    	so.connect(my_nc);
+						
 						master_disp.frame.initnet(my_nc);
 						preview1.frame.initnet(my_nc);
 						preview2.frame.initnet(my_nc);
@@ -581,7 +595,7 @@
 				 showEffect="{fadeIn}"
 				 hideEffect="{fadeOut}"   click="mute();">
 		<mx:filters>
-			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+			<mx:DropShadowFilter id="shadow" distance="0" angle="3" color="#000000"  strength="4" />
 		</mx:filters>
 	</mx:CheckBox>	
 	<mx:Button id="fullScreenButton" x="525" y="391" label="На весь экран" click="toggleFullScreen();" width="114"/>
@@ -591,6 +605,12 @@
 	<mx:TextArea selectable="true" id="chatBox" x="10" y="421" width="629" height="105" editable="false" />
 	<mx:TextInput id="chatSendText" x="9" y="532" width="536" keyDown="chatSendText_keyDownHandler(event)"/>
 	<mx:Button id="chatSendButton" x="552" y="532" label="Отправить" click="chatSendButton_clickHandler(event)"/>
+	<mx:Text id="prvName1" x="526" y="66" width="113" height="31" color="#00D2FF" filters="{shadow}"/>
+	<mx:Text id="prvName2" x="526" y="159" width="113" height="31" color="#00D2FF" filters="{shadow}"/>
+	<mx:Text id="prvName3" x="526" y="252" width="113" height="31" color="#00D2FF" filters="{shadow}"/>
+	<mx:Text id="prvName4" x="525" y="345" width="113" height="31" color="#00D2FF" filters="{shadow}"/>
+	<mx:Text id="mastername" x="170" y="366" width="338" color="#00D2FF" filters="{shadow}"
+			 textAlign="right"/>
 	
 	
 </mx:Application>

@@ -11,14 +11,36 @@
     		private var t:Timer;
     		public var pending:Boolean = false;
     		public var prevStatus:Boolean = false;
+			private var highlight:Boolean = false;
     		private function startup():void{
     			
     			t = new Timer(500);
     			t.addEventListener(TimerEvent.TIMER,onTick);
     			//glowFilter.play();
     			t.start();
+				
     			
     		}
+			public function set setHighlight(p:Boolean):void
+			{
+				this.highlight = p;
+					switch (p)
+					{
+						case true:
+								//this.sty
+							break;
+						case false:
+							break;
+					}
+				
+				
+			}
+
+			public function get getHighlight():Boolean
+			{
+				return highlight;
+			}
+			
     		private function onTick(event:TimerEvent):void{
     			if (pending != prevStatus){
 	    			if (pending){

@@ -84,7 +84,7 @@
 						o.frame.ns.play(streams[i-1]);
 						//o.frame.ns.play("agorodishenin");
 						o.frame.ns.receiveAudio(false);
-						o.strname.text = streams[i-1];
+						//o.strname.text = streams[i-1];
 						o.frame.active = true;
 						o.statInd.setStyle("backgroundColor",0x00FF00);
 						o.statInd.toolTip = "Online";
@@ -187,7 +187,7 @@
 						o.frame.initnet(my_nc);
 						o.frame.ns.play(args[0]);
 						o.frame.ns.receiveAudio(false);
-						o.strname.text = args[0];
+						//o.strname.text = args[0];
 						o.frame.active = true;
 						o.statInd.setStyle("backgroundColor",0x00FF00);
 						o.statInd.toolTip = "Online";
@@ -205,7 +205,7 @@
 				for(i=1;i<=10;i++){
 					n = "s"+i.toString();
 					o = Application.application.getChildByName(n) as netdisp;
-					if (o.strname.text == args[0]){
+					/*if (o.strname.text == args[0]){
 						o.frame.active = false;
 						o.strname.text = "";
 						o.statInd.setStyle("backgroundColor",0xFF0000);
@@ -214,7 +214,7 @@
 						o.sound.selected = false;
 						
 						break;
-					}
+					}*/
 				}
 			}
 			

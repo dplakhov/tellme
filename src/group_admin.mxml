@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- controls\videodisplay\VideoDisplayCamera.mxml -->
 <mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"  
-				layout="absolute" width="745" height="653" 
+				layout="absolute" width="745" height="647" 
 				creationComplete="startup();" color="#0B333C" 
 				xmlns:routines="routines.*" applicationComplete="scaleapp();" xmlns:ns1="*" backgroundColor="#000000">
 	
@@ -30,25 +30,34 @@
 	<mx:Fade id="fadeIn" duration="200" alphaFrom="0.0" alphaTo="1.0"/>
 	
             
-	<mx:DataGrid doubleClickEnabled="true" itemDoubleClick="streamdisp_itemDoubleClickHandler(event)" itemClick="streamdisp_itemClickHandler(event)" dataProvider="{streamlist}"
+	<mx:DataGrid doubleClickEnabled="true"  itemDoubleClick="streamdisp_itemDoubleClickHandler(event)" itemClick="streamdisp_itemClickHandler(event)" dataProvider="{streamlist}"
 			dragEnabled="false" 
 			allowMultipleSelection="false" 
 			x="513" y="184" width="222" height="290" 
 			id="streamdisp" 
 			fontSize="10" color="#0B333C"
-			
+			rowHeight="47"
 			>
 		<mx:columns>
-			
-			<mx:DataGridColumn   headerText="Гости" dataField="name" >
-				<mx:itemRenderer>
-					<mx:Component>
-						<!--<mx:Label  fontWeight="{data.style}" />-->
-						<ns1:customLabel pending="{data.pending}" fontWeight="{data.style}" />
+			<mx:DataGridColumn sortable="false" draggable="false"  width="47" >
+				<mx:itemRenderer >
+					<mx:Component >
+						<mx:HBox  paddingLeft="0" paddingTop="0" verticalScrollPolicy="off" horizontalScrollPolicy="off" >
+							<mx:Image scaleContent="true"  autoLoad="true" source="{data.image}" height="47" width="47" />
+						</mx:HBox>
 					</mx:Component>
 				</mx:itemRenderer>
 			</mx:DataGridColumn>
-			<mx:DataGridColumn width="20" >
+			
+			<mx:DataGridColumn draggable="false" sortable="false"   headerText="Гости" dataField="name"  >
+				<mx:itemRenderer>
+					<mx:Component>
+						<!--<mx:Label  fontWeight="{data.style}" />-->
+						<ns1:customLabel fontSize="12" pending="{data.pending}" fontWeight="{data.style}" fontStyle="{data.fstyle}" color="{data.fcolor}" />
+					</mx:Component>
+				</mx:itemRenderer>
+			</mx:DataGridColumn>
+			<mx:DataGridColumn draggable="false" sortable="false" width="20" >
 				<mx:itemRenderer >
 					<mx:Component >
 						<mx:HBox  paddingLeft="5" paddingTop="3" >
@@ -66,7 +75,7 @@
 		<mx:TextArea x="0" y="0" width="300.5" height="177" id="errtext"/>
 		<mx:Button x="112.25" y="185" label="Закрыть" click="cons.visible=false;"/>
 	</mx:Panel>
-	<mx:Button x="513" y="483" label="Добавить в список" click="ViewStreamClick();" width="222" fontSize="9"/>
+	<mx:Button x="513" y="481" label="Добавить в список" click="ViewStreamClick();" width="222" fontSize="9"/>
 	
 	<mx:VideoDisplay id="myVid" x="10" y="268"
 		 width="151" height="113"
@@ -120,7 +129,7 @@
 		<mx:Label x="97" y="172" text="Идентификатор группы:"/>
 		<mx:TextInput x="97" y="184" height="19" width="184" borderStyle="none" id="groupIdLabel" editable="false" click="groupIdLabel_clickHandler(event)"/>
 	</mx:Panel>
-	<mx:Button x="10" y="483" label="Настройки" click="settingsPanel.visible=true;" fontSize="9"/>
+	<mx:Button x="10" y="481" label="Настройки" click="settingsPanel.visible=true;" fontSize="9"/>
 	
 	<mx:CheckBox change="mute()" id="soundSwitch" x="10" y="11" label="Звук" color="#FFFC00"
 				 textRollOverColor="#FFFC00" 
@@ -131,14 +140,14 @@
 				 showEffect="{fadeIn}"
 				 hideEffect="{fadeOut}"   click="mute();">
 		<mx:filters>
-			<mx:DropShadowFilter distance="0" angle="3" color="#000000"  strength="4" />
+			<mx:DropShadowFilter id="shadowfilter" distance="0" angle="3" color="#000000"  strength="4" />
 		</mx:filters>
 	</mx:CheckBox>	
-	<mx:Button id="fullScreenButton" x="396" y="483" label="На весь экран" click="toggleFullScreen();" width="109" fontSize="9"/>
+	<mx:Button id="fullScreenButton" x="396" y="481" label="На весь экран" click="toggleFullScreen();" width="109" fontSize="9"/>
 	<mx:RadioButtonGroup change="initcam(); initmic();" id="deviceGroup"/>
-	<mx:RadioButton x="316" y="483" label="1" groupName="deviceGroup" fontWeight="bold" selected="true" id="deviceGroup1"/>
-	<mx:RadioButton x="356" y="483" label="2" groupName="deviceGroup" fontWeight="bold" id="deviceGroup2"/>
-	<mx:Label x="202" y="484" text="Группа устройств:" fontSize="10" fontWeight="bold"/>
+	<mx:RadioButton x="316" y="481" label="1" groupName="deviceGroup" fontWeight="bold" selected="true" id="deviceGroup1"/>
+	<mx:RadioButton x="356" y="481" label="2" groupName="deviceGroup" fontWeight="bold" id="deviceGroup2"/>
+	<mx:Label x="202" y="482" text="Группа устройств:" fontSize="10" fontWeight="bold"/>
 	<mx:DataGrid doubleClickEnabled="true" itemClick="vipStreams_itemClickHandler(event)" itemDoubleClick="vipStreams_itemDoubleClickHandler(event)" x="513" y="6" width="222" height="170" id="vipStreams">
 		<mx:columns>
 			<mx:DataGridColumn headerText="VIP" dataField="name"/>
@@ -164,14 +173,22 @@
 
 		</mx:columns>
 	</mx:DataGrid>
-	<mx:Button x="103" y="483" label="Начать" id="toggleConferenceButton" click="toggleConferenceButton_clickHandler(event)" width="91" enabled="false"/>
+	<mx:Button x="103" y="481" label="Начать" id="toggleConferenceButton" click="toggleConferenceButton_clickHandler(event)" width="91" enabled="false"/>
 	<mx:Canvas x="63" y="14" width="15" height="15" borderStyle="solid" cornerRadius="8" backgroundColor="#FF0000" id="confStatusInd">
 	</mx:Canvas>
-	<mx:Label x="86" y="13" color="#00D2FF" fontWeight="bold" width="257" id="confStatusText"/>
-	<mx:TextArea id="chatBox" x="10" y="513" width="725" height="100" editable="false"/>
-	<mx:TextInput id="chatSendText" x="10" y="621" width="627"
+	<mx:Label x="86" y="13" color="#00D2FF" fontWeight="bold" width="185" id="confStatusText" filters="{shadowfilter}"/>
+	<mx:TextArea id="chatBox" x="10" y="511" width="725" height="100" editable="false"/>
+	<mx:TextInput id="chatSendText" x="10" y="619" width="627"
 				  keyDown="chatSendText_keyDownHandler(event)"/>
-	<mx:Button id="chatSendButton" x="645" y="621" label="Отправить"
+	<mx:Button id="chatSendButton" x="645" y="619" label="Отправить"
 			   click="chatSendButton_clickHandler(event)"/>
+	<mx:Text id="membersCount" x="402" y="13" width="104" color="#00D2FF" fontWeight="bold" filters="{shadowfilter}"/>
+	<mx:Text id="prvName1" x="15" y="443" width="113" height="31" color="#00D2FF"
+			 filters="{shadowfilter}" textAlign="left"/>
+	<mx:Text id="prvName2" x="136" y="443" width="113" height="31" color="#00D2FF" textAlign="left" filters="{shadowfilter}"/>
+	<mx:Text id="prvName3" x="257" y="443" width="113" height="31" color="#00D2FF" textAlign="left" filters="{shadowfilter}"/>
+	<mx:Text id="prvName4" x="378" y="443" width="113" height="31" color="#00D2FF" textAlign="left" filters="{shadowfilter}"/>
+	<mx:Text id="mastername" x="169" y="361" width="336" color="#009CFF" filters="{shadowfilter}"
+			 textAlign="right"/>
 
 </mx:Application>
